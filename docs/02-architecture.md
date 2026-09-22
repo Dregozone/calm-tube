@@ -28,6 +28,7 @@ app/
   Console/Commands/
     RefreshChannelsCommand.php        calm:refresh {--channel=} {--force}
     EnrichVideosCommand.php           calm:enrich  (retries anything unenriched)
+    BackfillChannelsCommand.php       calm:backfill (walks the uploads playlist)
   Http/Controllers/
     ThumbnailController.php           streams archived video thumbnails
     AvatarController.php              streams archived channel avatars
@@ -46,6 +47,8 @@ app/
     DurationParser.php                ISO 8601 -> seconds + human string
   Services/
     ChannelRefresher.php              orchestrates one refresh, returns a result object
+    ChannelBackfiller.php             recovers uploads the feed window pushed out
+    VideoEnricher.php                 durations, live status, availability, Shorts
   Support/
     RefreshResult.php                 value object: new/skipped/failed counts, error
 config/
@@ -118,6 +121,20 @@ simply never writing to that column again after insert.
 
 Resolution order is `maxresdefault` → `mqdefault`; the source URL is stored alongside the
 local path so a missing file falls back to hotlinking instead of a broken image.
+
+### `ChannelBackfiller`
+
+Walks a channel's uploads playlist, which holds its whole history, and stores what is
+missing. The RSS feed holds only 15 entries whatever they are, so a channel posting Shorts
+heavily pushes its long-form videos out of that window within hours.
+
+Two modes. `calm:backfill` walks to a given depth to recover history already lost. An
+ordinary refresh calls it with `untilKnown`, which stops at the first video already stored,
+and only when *every* feed entry was new — the signal that the window may have overflowed.
+
+This is the one place `part=snippet` is requested for a video, because a playlist item is the
+only source of a backfilled video's archived title and description. Requesting snippet to
+**create** a row is fine; requesting it to **update** one is what the archive rule forbids.
 
 ### `ChannelRefresher`
 

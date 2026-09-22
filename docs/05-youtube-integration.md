@@ -8,6 +8,7 @@ official Data API v3, and one HTTP status code from the `/shorts/` URL.
 | RSS feed | Free, no key | Discovering new uploads: ID, title, description, published date, thumbnail URL |
 | Data API `videos.list` | 1 unit / 50 videos | Duration, live status, availability |
 | Data API `channels.list` | 1 unit | Resolving a channel, its title and avatar |
+| Data API `playlistItems.list` | 1 unit / 50 videos | Recovering uploads the 15-entry feed window pushed out |
 | `HEAD /shorts/{id}` | Free, no key | Is this a Short? |
 
 ---
@@ -110,9 +111,10 @@ A `304` finishes the refresh immediately with zero new videos and no parsing.
 
 - **15 entries only.** A channel posting 16 videos between refreshes loses the oldest ones
   permanently. At an hourly schedule this cannot realistically happen.
-- **No backfill.** Adding a channel imports at most 15 videos; its history is not available
-  through RSS. (The uploads playlist could provide it — see
-  [07-open-questions.md](07-open-questions.md).)
+- **15 entries, whatever they are.** Shorts occupy the same slots, so a channel posting them
+  heavily pushes its long-form videos out of the window within hours. This is not theoretical:
+  one real channel's entire window spanned 4.5 hours, and two contributed nothing to the feed
+  at all. `calm:backfill` and the refresh-time overflow recovery exist because of this.
 - **Live and premiere behaviour is inconsistent.** Upcoming premieres usually appear at
   announcement; live streams often appear only once finished. Both are handled by the live
   status rules below rather than trusted from the feed.
@@ -239,6 +241,7 @@ The default project allowance is **10,000 units/day**, resetting at midnight US 
 | --- | --- |
 | `videos.list` (any number of parts, up to 50 IDs) | 1 |
 | `channels.list` | 1 |
+| `playlistItems.list` (up to 50 videos) | 1 |
 | RSS fetch | 0 |
 | Shorts probe | 0 |
 | `search.list` (never used) | 100 |

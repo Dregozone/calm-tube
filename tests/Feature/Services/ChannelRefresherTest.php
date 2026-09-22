@@ -326,3 +326,64 @@ describe('refresh runs', function (): void {
         expect(RefreshRun::sole()->trigger)->toBe(RefreshTrigger::Manual);
     });
 });
+
+describe('recovering an overflowed feed', function (): void {
+    it('walks the uploads playlist when every feed entry is new', function (): void {
+        Storage::fake('local');
+        $channel = calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ']);
+
+        // A previous refresh left the channel with a video the feed no longer holds.
+        Video::factory()->for($channel)->create(['youtube_video_id' => 'bkfilvid004']);
+
+        fakeFeed('feed.xml');
+        fakeVideosList();
+        fakeUploadsPlaylist();
+        fakeThumbnailDownloads();
+
+        $result = $this->refresher->refresh($channel);
+
+        // 15 from the feed, plus the three the window had pushed out.
+        expect($result->newVideos)->toBe(18)
+            ->and(requestsTo('playlistItems'))->toBe(1);
+    });
+
+    it('does not walk the playlist on a channel it has never refreshed', function (): void {
+        Storage::fake('local');
+        fakeSuccessfulRefresh();
+
+        $result = $this->refresher->refresh(
+            calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ'])
+        );
+
+        expect($result->newVideos)->toBe(15)
+            ->and(requestsTo('playlistItems'))->toBe(0);
+    });
+
+    it('does not walk the playlist when the feed held something it already had', function (): void {
+        Storage::fake('local');
+        $channel = calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ']);
+        fakeFeedSequence('feed-single-entry.xml', 'feed.xml');
+        fakeVideosList();
+        fakeThumbnailDownloads();
+
+        $this->refresher->refresh($channel);
+        $this->refresher->refresh($channel->fresh());
+
+        expect(requestsTo('playlistItems'))->toBe(0);
+    });
+
+    it('does not walk the playlist without an API key', function (): void {
+        Storage::fake('local');
+        config()->set('calm-tube.api_key');
+        $channel = calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ']);
+        Video::factory()->for($channel)->create(['youtube_video_id' => 'bkfilvid004']);
+
+        fakeFeed('feed.xml');
+        fakeShortsProbe();
+        fakeThumbnailDownloads();
+
+        $this->refresher->refresh($channel);
+
+        expect(requestsTo('playlistItems'))->toBe(0);
+    });
+});

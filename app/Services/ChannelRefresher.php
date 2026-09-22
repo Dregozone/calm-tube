@@ -25,10 +25,17 @@ use Illuminate\Support\Facades\Log;
  */
 class ChannelRefresher
 {
+    /**
+     * How far an overflow recovery will walk back before giving up, so a
+     * misjudged trigger cannot run away through a channel's whole history.
+     */
+    private const int OVERFLOW_LIMIT = 200;
+
     public function __construct(
         private readonly RssFeedClient $feeds,
         private readonly DataApiClient $api,
         private readonly VideoEnricher $enricher,
+        private readonly ChannelBackfiller $backfiller,
     ) {}
 
     public function refresh(
@@ -53,6 +60,8 @@ class ChannelRefresher
 
         $degradedBecause = $this->enrich($created);
 
+        $recovered = $this->recoverOverflow($channel, $feed->entries, $created->count());
+
         $channel->forceFill([
             'feed_etag' => $feed->etag,
             'feed_last_modified' => $feed->lastModified,
@@ -60,16 +69,19 @@ class ChannelRefresher
             'last_refresh_error' => null,
         ])->save();
 
+        $newVideos = $created->count() + $recovered;
+
         Log::channel('calm')->info('Channel refreshed', [
             'channel_id' => $channel->youtube_channel_id,
-            'new' => $created->count(),
+            'new' => $newVideos,
+            'recovered' => $recovered,
             'not_modified' => $feed->notModified,
             'degraded' => $degradedBecause,
         ]);
 
         return $this->finish($run, $degradedBecause === null
-            ? RefreshResult::ok($created->count())
-            : RefreshResult::degraded($created->count(), $degradedBecause));
+            ? RefreshResult::ok($newVideos)
+            : RefreshResult::degraded($newVideos, $degradedBecause));
     }
 
     /**
@@ -147,6 +159,33 @@ class ChannelRefresher
         $this->enricher->detectShorts($created);
 
         return $degradedBecause;
+    }
+
+    /**
+     * A feed where every entry is new means the fifteen entry window may have
+     * overflowed since last time, taking videos with it. When that happens the
+     * uploads playlist is walked back to the first video already stored.
+     *
+     * Skipped on a channel's first refresh, where everything is new by
+     * definition; calm:backfill is the explicit way to reach further back.
+     *
+     * @param  list<FeedEntry>  $entries
+     */
+    private function recoverOverflow(Channel $channel, array $entries, int $created): int
+    {
+        $isFirstRefresh = $channel->videos()->count() === $created;
+
+        if ($entries === [] || $created < count($entries) || $isFirstRefresh) {
+            return 0;
+        }
+
+        if (! $this->api->isConfigured()) {
+            return 0;
+        }
+
+        return $this->backfiller
+            ->backfill($channel, self::OVERFLOW_LIMIT, untilKnown: true)
+            ->count();
     }
 
     private function startRun(Channel $channel, RefreshTrigger $trigger): RefreshRun

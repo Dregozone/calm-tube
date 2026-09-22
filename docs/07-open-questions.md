@@ -6,16 +6,27 @@ Decisions deferred, risks accepted, and ideas parked. Nothing here blocks implem
 
 ## Deferred features
 
-### Backfilling a channel's history
+### ~~Backfilling a channel's history~~ — built, because the premise was wrong
 
-Adding a channel imports the ~15 videos in its RSS feed and nothing older. The uploads
-playlist (`contentDetails.relatedPlaylists.uploads`, already stored on `channels`) would give
-the full back catalogue via `playlistItems.list` — 1 unit per 50 videos, so even a
-1,000-video channel costs 20 units plus enrichment.
+Originally deferred on the grounds that importing a back catalogue would flood the feed. Real
+data overturned it. The RSS feed holds 15 entries **whatever they are**, and Shorts occupy the
+same slots, so on a Shorts-heavy channel the long-form videos are pushed out before the app
+ever sees them:
 
-**Why it's deferred:** importing 1,000 videos floods the feed and makes "what's new" useless
-on day one. If this ever gets built, it should land in a separate "Archive" view rather than
-the main feed, and be triggered per channel on demand.
+| Channel | Shorts in the window | Window spans | Videos reaching the feed |
+| --- | --- | --- | --- |
+| MoreMozi | 10/15 | **4.5 hours** | 5 |
+| Alex Hormozi | 15/15 | 2 days | **0** |
+| Vanessa Van Edwards | 15/15 | 20 days | **0** |
+
+Two channels contributed nothing at all. The flooding worry was also wrong: the feed is
+reverse-chronological, so recovered videos land in the past where they belong rather than
+pushing anything off the top.
+
+`calm:backfill` now walks the uploads playlist per channel, and an ordinary refresh walks it
+back to the first known video whenever *every* feed entry is new, which is the signal that
+the window may have overflowed. Costs about 208 units once and near nothing thereafter,
+against a 10,000/day allowance.
 
 ### Marking watched at 90%
 
@@ -147,7 +158,7 @@ So future sessions don't relitigate these:
 | Auth | Fortify kept, single user, `auth` middleware, registration closed after setup |
 | Database | SQLite |
 | Refresh execution | Synchronous, `dispatchSync()`, no queue worker |
-| Backfill on add | RSS only (~15 videos) |
+| Backfill on add | RSS only (~15 videos); `calm:backfill` reaches further on demand |
 | Shorts | Excluded entirely. Probe + duration fallback. **No toggle to show them** |
 | Live / upcoming | Stored, hidden until finished |
 | Feed layout | One reverse-chronological grid, 24 per page, Previous/Next |

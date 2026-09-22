@@ -108,6 +108,26 @@ function fakeVideosList(string $fixture = 'videos.list.json', int $status = 200)
     ]);
 }
 
+/**
+ * Two pages of a channel's uploads playlist: 50 items then 30.
+ */
+function fakeUploadsPlaylist(string ...$fixtures): void
+{
+    $fixtures = $fixtures === []
+        ? ['playlist-items-page1.json', 'playlist-items-page2.json']
+        : $fixtures;
+
+    $sequence = Http::sequence();
+
+    foreach ($fixtures as $fixture) {
+        $sequence->push(youtubeFixture($fixture), 200);
+    }
+
+    Http::fake([
+        'www.googleapis.com/youtube/v3/playlistItems*' => $sequence,
+    ]);
+}
+
 function fakeChannelsList(string $fixture = 'channels.list.json', int $status = 200): void
 {
     Http::fake([
@@ -175,6 +195,17 @@ function fakeSuccessfulRefresh(string $feedFixture = 'feed.xml', string $videosF
     fakeFeed($feedFixture);
     fakeVideosList($videosFixture);
     fakeThumbnailDownloads();
+}
+
+/**
+ * How many requests went to one endpoint, for tests where the total would
+ * also count enrichment and would pass for the wrong reason.
+ */
+function requestsTo(string $fragment): int
+{
+    return collect(Http::recorded())
+        ->filter(fn (array $pair): bool => str_contains($pair[0]->url(), $fragment))
+        ->count();
 }
 
 /*

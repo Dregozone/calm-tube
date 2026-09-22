@@ -6,6 +6,7 @@ use App\Enums\LiveStatus;
 use App\Exceptions\ApiRequestException;
 use App\Exceptions\QuotaExceededException;
 use App\Support\ChannelData;
+use App\Support\FeedEntry;
 use App\Support\VideoData;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Client\ConnectionException;
@@ -35,6 +36,14 @@ class DataApiClient
     private const string VIDEO_PARTS = 'contentDetails,liveStreamingDetails,status';
 
     private const string CHANNEL_PARTS = 'snippet,contentDetails';
+
+    /**
+     * snippet is required here, unlike videos.list, because a playlist item is
+     * the first and only source of a backfilled video's archived title,
+     * description and thumbnail. Requesting it to create a row is fine;
+     * requesting it to update one is what the archive rule forbids.
+     */
+    private const string PLAYLIST_PARTS = 'snippet,contentDetails';
 
     private const int BATCH_SIZE = 50;
 
@@ -81,6 +90,69 @@ class DataApiClient
         }
 
         return $videos;
+    }
+
+    /**
+     * One page of a channel's uploads, newest first.
+     *
+     * The uploads playlist holds a channel's whole history, unlike the RSS
+     * feed's fifteen entries, so this is how videos pushed out of that window
+     * are recovered.
+     *
+     * @return array{entries: list<FeedEntry>, nextPageToken: ?string}
+     */
+    public function uploadsPage(string $playlistId, ?string $pageToken = null): array
+    {
+        if (! $this->isConfigured()) {
+            return ['entries' => [], 'nextPageToken' => null];
+        }
+
+        $payload = $this->get('playlistItems', array_filter([
+            'part' => self::PLAYLIST_PARTS,
+            'playlistId' => $playlistId,
+            'maxResults' => self::BATCH_SIZE,
+            'pageToken' => $pageToken,
+        ]));
+
+        $entries = [];
+
+        foreach ($this->items($payload) as $item) {
+            $entry = $this->toEntry($item);
+
+            if ($entry instanceof FeedEntry) {
+                $entries[] = $entry;
+            }
+        }
+
+        return [
+            'entries' => $entries,
+            'nextPageToken' => $this->text(data_get($payload, 'nextPageToken')),
+        ];
+    }
+
+    private function toEntry(mixed $item): ?FeedEntry
+    {
+        $videoId = $this->text(data_get($item, 'contentDetails.videoId'))
+            ?? $this->text(data_get($item, 'snippet.resourceId.videoId'));
+
+        $title = $this->text(data_get($item, 'snippet.title'));
+
+        // videoPublishedAt is when the video went up; snippet.publishedAt is
+        // when it was added to the playlist, which can differ.
+        $published = $this->text(data_get($item, 'contentDetails.videoPublishedAt'))
+            ?? $this->text(data_get($item, 'snippet.publishedAt'));
+
+        if ($videoId === null || $title === null || $published === null) {
+            return null;
+        }
+
+        return new FeedEntry(
+            videoId: $videoId,
+            title: $title,
+            description: $this->text(data_get($item, 'snippet.description')),
+            publishedAt: CarbonImmutable::parse($published),
+            thumbnailUrl: $this->text(data_get($item, 'snippet.thumbnails.high.url')),
+        );
     }
 
     public function channelById(string $channelId): ?ChannelData
