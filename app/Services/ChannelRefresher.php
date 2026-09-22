@@ -5,12 +5,15 @@ namespace App\Services;
 use App\Enums\RefreshStatus;
 use App\Enums\RefreshTrigger;
 use App\Exceptions\FeedUnavailableException;
+use App\Exceptions\YouTubeException;
 use App\Models\Channel;
 use App\Models\RefreshRun;
 use App\Models\Video;
+use App\Services\YouTube\DataApiClient;
 use App\Services\YouTube\RssFeedClient;
 use App\Support\FeedEntry;
 use App\Support\RefreshResult;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -22,7 +25,11 @@ use Illuminate\Support\Facades\Log;
  */
 class ChannelRefresher
 {
-    public function __construct(private readonly RssFeedClient $feeds) {}
+    public function __construct(
+        private readonly RssFeedClient $feeds,
+        private readonly DataApiClient $api,
+        private readonly VideoEnricher $enricher,
+    ) {}
 
     public function refresh(
         Channel $channel,
@@ -40,9 +47,11 @@ class ChannelRefresher
             return $this->fail($channel, $run, $exception->getMessage());
         }
 
-        $newVideos = $feed->notModified
-            ? 0
+        $created = $feed->notModified
+            ? new Collection
             : $this->store($channel, $feed->entries);
+
+        $degradedBecause = $this->enrich($created);
 
         $channel->forceFill([
             'feed_etag' => $feed->etag,
@@ -53,11 +62,14 @@ class ChannelRefresher
 
         Log::channel('calm')->info('Channel refreshed', [
             'channel_id' => $channel->youtube_channel_id,
-            'new' => $newVideos,
+            'new' => $created->count(),
             'not_modified' => $feed->notModified,
+            'degraded' => $degradedBecause,
         ]);
 
-        return $this->finish($run, RefreshResult::ok($newVideos));
+        return $this->finish($run, $degradedBecause === null
+            ? RefreshResult::ok($created->count())
+            : RefreshResult::degraded($created->count(), $degradedBecause));
     }
 
     /**
@@ -68,11 +80,15 @@ class ChannelRefresher
      * looked at again, so it cannot change.
      *
      * @param  list<FeedEntry>  $entries
+     * @return Collection<int, Video>
      */
-    private function store(Channel $channel, array $entries): int
+    private function store(Channel $channel, array $entries): Collection
     {
+        /** @var Collection<int, Video> $created */
+        $created = new Collection;
+
         if ($entries === []) {
-            return 0;
+            return $created;
         }
 
         // Checked across every channel, not just this one: a YouTube video id
@@ -85,25 +101,52 @@ class ChannelRefresher
             ->pluck('youtube_video_id')
             ->all();
 
-        $created = 0;
-
         foreach ($entries as $entry) {
             if (in_array($entry->videoId, $known, true)) {
                 continue;
             }
 
-            $channel->videos()->create([
+            $created->push($channel->videos()->create([
                 'youtube_video_id' => $entry->videoId,
                 'title' => $entry->title,
                 'description' => $entry->description,
                 'published_at' => $entry->publishedAt,
                 'thumbnail_url' => $entry->thumbnailUrl,
-            ]);
-
-            $created++;
+            ]));
         }
 
         return $created;
+    }
+
+    /**
+     * Adds durations, live status and Shorts detection to newly stored videos.
+     *
+     * Returns why the refresh was degraded, or null if it was not. A missing
+     * key or an exhausted quota costs durations, never the videos themselves.
+     *
+     * @param  Collection<int, Video>  $created
+     */
+    private function enrich(Collection $created): ?string
+    {
+        if ($created->isEmpty()) {
+            return null;
+        }
+
+        $degradedBecause = null;
+
+        if ($this->api->isConfigured()) {
+            try {
+                $this->enricher->enrich($created);
+            } catch (YouTubeException $exception) {
+                $degradedBecause = $exception->getMessage();
+            }
+        } else {
+            $degradedBecause = 'No YouTube API key, so durations are unavailable.';
+        }
+
+        $this->enricher->detectShorts($created);
+
+        return $degradedBecause;
     }
 
     private function startRun(Channel $channel, RefreshTrigger $trigger): RefreshRun

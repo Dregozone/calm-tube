@@ -22,3 +22,12 @@ Artisan::command('inspire', function () {
 Schedule::command('calm:refresh', ['--scheduled'])
     ->hourly()
     ->withoutOverlapping();
+
+/*
+ * Picks up anything the API could not answer for earlier, and re-checks
+ * streams that may since have finished, so a missing key or an exhausted
+ * quota heals itself.
+ */
+Schedule::command('calm:enrich')
+    ->dailyAt('04:00')
+    ->withoutOverlapping();
