@@ -66,25 +66,31 @@ describe('pagination', function (): void {
 });
 
 describe('filters', function (): void {
+    /*
+     * These assert the paginated set rather than the rendered cards. A card is
+     * a nested Livewire component, and on an update request Livewire renders
+     * children as empty shells because the browser keeps the existing DOM, so
+     * asserting on card markup after set() would test Livewire's diffing
+     * rather than the filter.
+     */
+
     it('shows only unwatched videos when asked', function (): void {
         $channel = calmChannel();
         $unwatched = Video::factory()->for($channel)->create(['title' => 'Not Seen Yet']);
-        $watched = Video::factory()->for($channel)->watched()->create(['title' => 'Already Seen']);
+        Video::factory()->for($channel)->watched()->create(['title' => 'Already Seen']);
 
         Livewire::test('pages::feed')
             ->set('filter', 'unwatched')
-            ->assertSee($unwatched->title)
-            ->assertDontSee($watched->title);
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$unwatched->id]);
     });
 
     it('shows only the selected channel', function (): void {
         $wanted = Video::factory()->for(calmChannel())->create(['title' => 'From The Channel I Picked']);
-        $other = Video::factory()->for(Channel::factory())->create(['title' => 'From Another Channel']);
+        Video::factory()->for(Channel::factory())->create(['title' => 'From Another Channel']);
 
         Livewire::test('pages::feed')
             ->set('channel', $wanted->channel->youtube_channel_id)
-            ->assertSee($wanted->title)
-            ->assertDontSee($other->title);
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$wanted->id]);
     });
 
     it('keeps the filters in the url so they survive a reload', function (): void {
