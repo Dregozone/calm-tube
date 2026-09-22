@@ -1,0 +1,30 @@
+{
+    "kind": "youtube#videoListResponse",
+    "etag": "calm-tube-videos-etag",
+    "items": [
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0001",
+            "contentDetails": {
+                "duration": "PT6M17S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        }
+    ],
+    "pageInfo": {
+        "totalResults": 1,
+        "resultsPerPage": 1
+    }
+}

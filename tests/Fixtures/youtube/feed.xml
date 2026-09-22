@@ -1,0 +1,391 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"
+      xmlns:media="http://search.yahoo.com/mrss/"
+      xmlns="http://www.w3.org/2005/Atom">
+  <link rel="self" href="http://www.youtube.com/feeds/videos.xml?channel_id=UCMOqf8ab-42UUQIdVoKwjlQ"/>
+  <id>yt:channel:UCMOqf8ab-42UUQIdVoKwjlQ</id>
+  <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+  <title>Practical Engineering</title>
+  <link rel="alternate" href="https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ"/>
+  <author>
+    <name>Practical Engineering</name>
+    <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+  </author>
+  <published>2016-01-29T04:06:47+00:00</published>
+
+  <entry>
+    <id>yt:video:calmvid0001</id>
+    <yt:videoId>calmvid0001</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 01</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0001"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-15T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 01</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0001?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0001/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 01.
+
+    Referenced: https://example.com/paper-1.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0002</id>
+    <yt:videoId>calmvid0002</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 02</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0002"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-14T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 02</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0002?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0002/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 02.
+
+    Referenced: https://example.com/paper-2.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0003</id>
+    <yt:videoId>calmvid0003</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 03</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0003"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-13T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 03</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0003?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0003/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 03.
+
+    Referenced: https://example.com/paper-3.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0004</id>
+    <yt:videoId>calmvid0004</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 04</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0004"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-12T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 04</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0004?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0004/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 04.
+
+    Referenced: https://example.com/paper-4.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0005</id>
+    <yt:videoId>calmvid0005</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 05</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0005"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-11T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 05</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0005?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0005/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 05.
+
+    Referenced: https://example.com/paper-5.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0006</id>
+    <yt:videoId>calmvid0006</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 06</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0006"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-10T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 06</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0006?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0006/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 06.
+
+    Referenced: https://example.com/paper-6.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0007</id>
+    <yt:videoId>calmvid0007</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 07</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0007"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-09T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 07</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0007?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0007/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 07.
+
+    Referenced: https://example.com/paper-7.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0008</id>
+    <yt:videoId>calmvid0008</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 08</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0008"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-08T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 08</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0008?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0008/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 08.
+
+    Referenced: https://example.com/paper-8.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0009</id>
+    <yt:videoId>calmvid0009</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 09</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0009"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-07T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 09</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0009?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0009/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 09.
+
+    Referenced: https://example.com/paper-9.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0010</id>
+    <yt:videoId>calmvid0010</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 10</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0010"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-06T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 10</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0010?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0010/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 10.
+
+    Referenced: https://example.com/paper-10.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0011</id>
+    <yt:videoId>calmvid0011</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 11</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0011"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-05T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 11</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0011?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0011/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 11.
+
+    Referenced: https://example.com/paper-11.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0012</id>
+    <yt:videoId>calmvid0012</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 12</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0012"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-04T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 12</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0012?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0012/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 12.
+
+    Referenced: https://example.com/paper-12.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0013</id>
+    <yt:videoId>calmvid0013</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 13</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0013"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-03T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 13</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0013?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0013/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 13.
+
+    Referenced: https://example.com/paper-13.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0014</id>
+    <yt:videoId>calmvid0014</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 14</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0014"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-02T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 14</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0014?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0014/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 14.
+
+    Referenced: https://example.com/paper-14.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+  <entry>
+    <id>yt:video:calmvid0015</id>
+    <yt:videoId>calmvid0015</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>Calm Tube Test Video 15</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0015"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-01T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>Calm Tube Test Video 15</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0015?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i4.ytimg.com/vi/calmvid0015/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for Calm Tube Test Video 15.
+
+    Referenced: https://example.com/paper-15.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+</feed>

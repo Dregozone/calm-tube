@@ -1,0 +1,6 @@
+{
+  "kind": "youtube#channelListResponse",
+  "etag": "calm-tube-empty-etag",
+  "pageInfo": { "totalResults": 0, "resultsPerPage": 5 },
+  "items": []
+}

@@ -1,0 +1,43 @@
+{
+  "kind": "youtube#videoListResponse",
+  "etag": "calm-tube-live-etag",
+  "pageInfo": { "totalResults": 4, "resultsPerPage": 4 },
+  "items": [
+    {
+      "kind": "youtube#video",
+      "id": "calmlive001",
+      "contentDetails": { "duration": "P0D", "definition": "hd" },
+      "liveStreamingDetails": {
+        "actualStartTime": "2026-03-15T18:00:00Z",
+        "concurrentViewers": "1423"
+      },
+      "status": { "uploadStatus": "uploaded", "privacyStatus": "public", "embeddable": true }
+    },
+    {
+      "kind": "youtube#video",
+      "id": "calmupcm001",
+      "contentDetails": { "duration": "P0D", "definition": "hd" },
+      "liveStreamingDetails": {
+        "scheduledStartTime": "2026-03-20T19:30:00Z"
+      },
+      "status": { "uploadStatus": "uploaded", "privacyStatus": "public", "embeddable": true }
+    },
+    {
+      "kind": "youtube#video",
+      "id": "calmdone001",
+      "contentDetails": { "duration": "PT1H14M2S", "definition": "hd" },
+      "liveStreamingDetails": {
+        "scheduledStartTime": "2026-03-10T19:00:00Z",
+        "actualStartTime": "2026-03-10T19:02:11Z",
+        "actualEndTime": "2026-03-10T20:16:13Z"
+      },
+      "status": { "uploadStatus": "processed", "privacyStatus": "public", "embeddable": true }
+    },
+    {
+      "kind": "youtube#video",
+      "id": "calmplain01",
+      "contentDetails": { "duration": "PT12M4S", "definition": "hd" },
+      "status": { "uploadStatus": "processed", "privacyStatus": "public", "embeddable": true }
+    }
+  ]
+}

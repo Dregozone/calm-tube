@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns:yt="http://www.youtube.com/xml/schemas/2015"
+      xmlns:media="http://search.yahoo.com/mrss/"
+      xmlns="http://www.w3.org/2005/Atom">
+  <link rel="self" href="http://www.youtube.com/feeds/videos.xml?channel_id=UCMOqf8ab-42UUQIdVoKwjlQ"/>
+  <id>yt:channel:UCMOqf8ab-42UUQIdVoKwjlQ</id>
+  <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+  <title>Practical Engineering</title>
+  <link rel="alternate" href="https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ"/>
+  <author>
+    <name>Practical Engineering</name>
+    <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+  </author>
+  <published>2016-01-29T04:06:47+00:00</published>
+
+  <entry>
+    <id>yt:video:calmvid0001</id>
+    <yt:videoId>calmvid0001</yt:videoId>
+    <yt:channelId>UCMOqf8ab-42UUQIdVoKwjlQ</yt:channelId>
+    <title>CLICKBAIT RETITLE 01</title>
+    <link rel="alternate" href="https://www.youtube.com/watch?v=calmvid0001"/>
+    <author>
+      <name>Practical Engineering</name>
+      <uri>https://www.youtube.com/channel/UCMOqf8ab-42UUQIdVoKwjlQ</uri>
+    </author>
+    <published>2026-03-15T14:00:00+00:00</published>
+    <updated>2026-03-16T08:21:55+00:00</updated>
+    <media:group>
+      <media:title>CLICKBAIT RETITLE 01</media:title>
+      <media:content url="https://www.youtube.com/v/calmvid0001?version=3" type="application/x-shockwave-flash" width="640" height="390"/>
+      <media:thumbnail url="https://i9.ytimg.com/vi/calmvid0001/hqdefault.jpg" width="480" height="360"/>
+      <media:description>Description for CLICKBAIT RETITLE 01.
+
+    Referenced: https://example.com/paper-1.pdf</media:description>
+      <media:community>
+        <media:starRating count="12043" average="4.95" min="1" max="5"/>
+        <media:statistics views="284119"/>
+      </media:community>
+    </media:group>
+  </entry>
+</feed>

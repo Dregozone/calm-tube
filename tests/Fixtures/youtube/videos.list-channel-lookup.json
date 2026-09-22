@@ -1,0 +1,17 @@
+{
+  "kind": "youtube#videoListResponse",
+  "etag": "calm-tube-lookup-etag",
+  "pageInfo": { "totalResults": 1, "resultsPerPage": 1 },
+  "items": [
+    {
+      "kind": "youtube#video",
+      "id": "calmvid0001",
+      "snippet": {
+        "publishedAt": "2026-03-15T14:00:00Z",
+        "channelId": "UCMOqf8ab-42UUQIdVoKwjlQ",
+        "title": "Calm Tube Test Video 01",
+        "channelTitle": "Practical Engineering"
+      }
+    }
+  ]
+}

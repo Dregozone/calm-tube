@@ -1,0 +1,13 @@
+{
+  "kind": "youtube#videoListResponse",
+  "etag": "calm-tube-short-etag",
+  "pageInfo": { "totalResults": 1, "resultsPerPage": 1 },
+  "items": [
+    {
+      "kind": "youtube#video",
+      "id": "calmvid0001",
+      "contentDetails": { "duration": "PT45S", "definition": "hd" },
+      "status": { "uploadStatus": "processed", "privacyStatus": "public", "embeddable": true }
+    }
+  ]
+}

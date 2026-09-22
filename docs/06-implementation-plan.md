@@ -3,13 +3,16 @@
 Ten phases, each independently shippable and independently testable. Every phase ends with a
 working app — never a half-migrated state.
 
+The test suite is written already and currently fails. Each phase turns its slice of it
+green; no phase needs new tests unless it uncovers a case the suite missed.
+
 **Per-phase discipline**
 
 1. Generate files with `php artisan make:… --no-interaction`.
-2. Write the test alongside the code, not after the phase.
-3. `php artisan test --compact --filter=…` for the narrowest relevant set.
-4. `composer quality` (Rector → Pint → PHPStan) before considering the phase done.
-5. Commit per phase.
+2. Run that phase's tests and make them pass:
+   `php artisan test --compact --filter=…`.
+3. `composer quality` (Rector → Pint → PHPStan) before considering the phase done.
+4. Commit per phase.
 
 ---
 
@@ -23,7 +26,7 @@ Strip the starter kit's placeholders and lay the foundations. No YouTube code ye
   [02-architecture.md](02-architecture.md#configuration); add `YOUTUBE_API_KEY=` to `.env`
   and `.env.example`.
 - Add the `calm` log channel to `config/logging.php`.
-- Remove the dashboard route, view and test; point `/` at `/feed` (a placeholder view for now).
+- Remove the dashboard route, view and `tests/Feature/DashboardTest.php`; point `/` at `/feed`.
 - Reduce the Flux sidebar to **Feed** and **Channels**.
 - Set `APP_NAME="Calm Tube"`.
 
@@ -317,78 +320,109 @@ embed-disabled video shows the fallback.
 
 ## Testing strategy
 
+**The suite is already written, and it is red.** 341 tests exist ahead of any implementation;
+the phases above are the order in which to turn them green. A phase is finished when its
+tests pass and `composer quality` is clean.
+
 ### Shape of the suite
 
-| Kind | Where | What |
-| --- | --- | --- |
-| Unit (no framework) | `tests/Unit/` | `DurationParser`, `ChannelResolver::parse()`, `RefreshResult` |
-| Feature — services | `tests/Feature/YouTube/`, `Refresh/`, `Images/` | HTTP clients and the refresh pipeline against faked responses |
-| Feature — Livewire | `tests/Feature/Feed/`, `Watch/`, `Channels/` | Component behaviour via `Livewire::test()` |
-| Manual | checklist in Phase 8 | The IFrame API end-of-video behaviour |
+| File | Covers |
+| --- | --- |
+| `tests/Unit/Services/YouTube/DurationParserTest.php` | ISO 8601 parsing and human formatting |
+| `tests/Feature/ConfigurationTest.php` | `config/calm-tube.php`, the log channel, booting without an API key |
+| `tests/Feature/Models/ChannelTest.php` | Display name, enabled scope, route key, uniqueness |
+| `tests/Feature/Models/VideoTest.php` | `scopeInFeed()` and every exclusion, casts, cascade delete |
+| `tests/Feature/Services/YouTube/DataApiClientTest.php` | Batching, the no-`snippet` guard, live status, quota |
+| `tests/Feature/Services/YouTube/ChannelResolverTest.php` | The full input matrix, resolution, no-key mode |
+| `tests/Feature/Services/YouTube/RssFeedClientTest.php` | Parsing, conditional requests, feed failures |
+| `tests/Feature/Services/YouTube/ShortsDetectorTest.php` | The decision table, the duration gate, fallbacks |
+| `tests/Feature/Services/YouTube/ImageArchiverTest.php` | Resolution order, the placeholder check, failures |
+| `tests/Feature/Services/ChannelRefresherTest.php` | The whole pipeline, including the archive guarantee |
+| `tests/Feature/Jobs/RefreshChannelTest.php` | The job wrapper |
+| `tests/Feature/Console/RefreshChannelsCommandTest.php` | `calm:refresh`, error isolation, the hourly schedule |
+| `tests/Feature/Console/EnrichVideosCommandTest.php` | `calm:enrich`, live promotion, the archive guarantee |
+| `tests/Feature/Http/Controllers/ThumbnailControllerTest.php` | Serving and falling back |
+| `tests/Feature/Http/Controllers/AvatarControllerTest.php` | Serving and falling back |
+| `tests/Feature/Livewire/Pages/FeedTest.php` | Ordering, filters, pagination, refresh, empty states |
+| `tests/Feature/Livewire/Pages/WatchTest.php` | Embed parameters, watched state, next-unwatched, description |
+| `tests/Feature/Livewire/Pages/Channels/IndexTest.php` | Add, every error message, edit, disable, delete |
+| `tests/Feature/Livewire/Pages/Channels/ShowTest.php` | The per-channel grid |
+| `tests/Feature/Livewire/VideoCardTest.php` | Card contents, watched toggle, hide |
+| Manual checklist (Phase 8) | The IFrame API end-of-video behaviour |
 
-Feature tests dominate, per the project's Pest guidance. The two genuinely pure pieces —
-duration parsing and input parsing — are unit tested because they have dozens of cases each
-and no dependencies.
+Feature tests dominate, per the project's Pest guidance. The one genuinely pure piece —
+duration parsing — is unit tested because it has dozens of cases and no dependencies.
+`ChannelResolver::parse()` is pure too, but lives with the rest of its class in a feature
+test that asserts it makes no HTTP request.
 
 ### Faking YouTube
 
 Every external call goes through `Illuminate\Support\Facades\Http`, so `Http::fake()` covers
-all of it. Put this in `tests/Pest.php` so a forgotten fake fails loudly instead of hitting
-the network:
+all of it. `tests/Pest.php` blocks the network for the whole feature suite, so a forgotten
+fake fails loudly instead of reaching YouTube:
 
 ```php
-uses(TestCase::class, RefreshDatabase::class)->in('Feature');
+pest()->extend(TestCase::class)
+    ->use(LazilyRefreshDatabase::class)
+    ->beforeEach(function (): void {
+        Http::preventStrayRequests();
 
-beforeEach(function (): void {
-    Http::preventStrayRequests();
-});
+        config()->set('calm-tube.api_key', 'test-api-key');
+    })
+    ->in('Feature');
 ```
 
-Fixtures live in `tests/Fixtures/youtube/` as real captured responses, loaded by a helper:
+Fixtures live in `tests/Fixtures/youtube/` and are loaded by `youtubeFixture($name)`. There is
+**one fake helper per endpoint** — `fakeFeed()`, `fakeVideosList()`, `fakeChannelsList()`,
+`fakeShortsProbe()`, `fakeThumbnailDownloads()` — plus `fakeSuccessfulRefresh()`, which calls
+the three a complete refresh needs.
+
+A blanket "fake everything" helper is deliberately avoided: it would accept requests a test
+never intended to make, which is exactly the defect class these tests exist to catch. A test
+fakes only what it expects, so an unexpected call fails the test.
 
 ```php
-// tests/Pest.php
-function youtubeFixture(string $name): string
-{
-    return file_get_contents(__DIR__."/Fixtures/youtube/{$name}");
-}
+it('keeps the videos it ingested when the API quota is exhausted', function (): void {
+    Storage::fake('local');
+    fakeFeed('feed-single-entry.xml');
+    fakeVideosList('quota-exceeded.json', 403);
+    fakeShortsProbe();
+    fakeThumbnailDownloads();
 
-function fakeYouTube(array $overrides = []): void
-{
-    Http::fake(array_merge([
-        'youtube.com/feeds/videos.xml*' => Http::response(youtubeFixture('feed.xml'), 200, [
-            'ETag' => '"abc123"',
-        ]),
-        'googleapis.com/youtube/v3/videos*' => Http::response(youtubeFixture('videos.list.json')),
-        'googleapis.com/youtube/v3/channels*' => Http::response(youtubeFixture('channels.list.json')),
-        'youtube.com/shorts/*' => Http::response('', 303, ['Location' => 'https://www.youtube.com/watch?v=x']),
-        'i.ytimg.com/*' => Http::response(youtubeFixture('thumb.jpg'), 200, ['Content-Type' => 'image/jpeg']),
-    ], $overrides));
-}
-```
-
-`fakeYouTube()` gives every test a working world; each test overrides only the one endpoint it
-cares about:
-
-```php
-it('records an error when the feed times out', function (): void {
-    fakeYouTube(['youtube.com/feeds/videos.xml*' => Http::failedConnection()]);
     // ...
 });
 ```
 
-Fixtures to capture once, by hand, and commit:
+**One caveat worth knowing:** the HTTP fake resolves the *earliest* matching stub, so calling
+`fakeFeed()` twice in one test silently keeps the first response. Tests that refresh the same
+channel twice — the archive-guarantee tests — use `fakeFeedSequence('feed-single-entry.xml',
+'feed-retitled.xml')` instead, which serves a different feed to each successive request.
+
+Committed fixtures:
 
 ```
-feed.xml                 a real 15-entry feed
-feed-single-entry.xml    for precise assertions
-feed-retitled.xml        same IDs, different titles + thumbnails — the archive test
-feed-malformed.xml       an HTML error page
-videos.list.json         mixed durations, one live, one upcoming, one missing ID
-channels.list.json       by id / by handle
-quota-exceeded.json      the real 403 body
-thumb.jpg                a few KB
+feed.xml                        15 entries, all durations above the Shorts ceiling
+feed-single-entry.xml           one entry, for precise assertions
+feed-retitled.xml               same ids, changed titles and thumbnails — the archive test
+feed-empty.xml                  a channel with no uploads
+feed-malformed.xml              an HTML error page served in place of the feed
+videos.list.json                durations for all 15 entries
+videos.list-single.json         one entry
+videos.list-short.json          a 45-second video, for Shorts detection
+videos.list-live.json           live, upcoming, finished-stream and plain videos
+videos.list-channel-lookup.json a video's channelId, for resolving a video URL
+videos.list-empty.json          no items — the "video is gone" case
+channels.list.json              a full channel, with avatar and uploads playlist
+empty-items.json                no items — the "no such channel" case
+quota-exceeded.json             the real 403 quotaExceeded body
+key-invalid.json                the real 400 invalid-key body
+thumbnail.jpg                   36 KB, a real archivable thumbnail
+thumbnail-placeholder.jpg       879 bytes, the tiny grey image YouTube serves for a
+                                missing variant — must be rejected by the archiver
 ```
+
+The feed and `videos.list` fixtures are generated together so their video ids and durations
+always agree.
 
 ### Things worth asserting that are easy to forget
 

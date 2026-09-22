@@ -1,0 +1,28 @@
+{
+  "kind": "youtube#channelListResponse",
+  "etag": "calm-tube-channels-etag",
+  "pageInfo": { "totalResults": 1, "resultsPerPage": 5 },
+  "items": [
+    {
+      "kind": "youtube#channel",
+      "id": "UCMOqf8ab-42UUQIdVoKwjlQ",
+      "snippet": {
+        "title": "Practical Engineering",
+        "description": "Civil engineering, explained.",
+        "customUrl": "@practicalengineering",
+        "publishedAt": "2016-01-29T04:06:47Z",
+        "thumbnails": {
+          "default": { "url": "https://yt3.ggpht.com/calm-avatar=s88-c-k-c0x00ffffff-no-rj", "width": 88, "height": 88 },
+          "medium": { "url": "https://yt3.ggpht.com/calm-avatar=s240-c-k-c0x00ffffff-no-rj", "width": 240, "height": 240 },
+          "high": { "url": "https://yt3.ggpht.com/calm-avatar=s800-c-k-c0x00ffffff-no-rj", "width": 800, "height": 800 }
+        }
+      },
+      "contentDetails": {
+        "relatedPlaylists": {
+          "likes": "",
+          "uploads": "UUMOqf8ab-42UUQIdVoKwjlQ"
+        }
+      }
+    }
+  ]
+}

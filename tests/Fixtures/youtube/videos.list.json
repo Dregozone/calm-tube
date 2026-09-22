@@ -1,0 +1,310 @@
+{
+    "kind": "youtube#videoListResponse",
+    "etag": "calm-tube-videos-etag",
+    "items": [
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0001",
+            "contentDetails": {
+                "duration": "PT6M17S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0002",
+            "contentDetails": {
+                "duration": "PT8M34S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0003",
+            "contentDetails": {
+                "duration": "PT10M51S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0004",
+            "contentDetails": {
+                "duration": "PT13M8S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0005",
+            "contentDetails": {
+                "duration": "PT15M25S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0006",
+            "contentDetails": {
+                "duration": "PT17M42S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0007",
+            "contentDetails": {
+                "duration": "PT19M59S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0008",
+            "contentDetails": {
+                "duration": "PT22M16S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0009",
+            "contentDetails": {
+                "duration": "PT24M33S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0010",
+            "contentDetails": {
+                "duration": "PT26M50S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0011",
+            "contentDetails": {
+                "duration": "PT29M7S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0012",
+            "contentDetails": {
+                "duration": "PT31M24S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0013",
+            "contentDetails": {
+                "duration": "PT33M41S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0014",
+            "contentDetails": {
+                "duration": "PT35M58S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        },
+        {
+            "kind": "youtube#video",
+            "id": "calmvid0015",
+            "contentDetails": {
+                "duration": "PT38M15S",
+                "dimension": "2d",
+                "definition": "hd",
+                "caption": "true",
+                "licensedContent": true,
+                "projection": "rectangular"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "license": "youtube",
+                "embeddable": true,
+                "publicStatsViewable": true,
+                "madeForKids": false
+            }
+        }
+    ],
+    "pageInfo": {
+        "totalResults": 15,
+        "resultsPerPage": 15
+    }
+}
