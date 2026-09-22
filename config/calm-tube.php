@@ -58,13 +58,17 @@ return [
     |--------------------------------------------------------------------------
     |
     | Thumbnails are downloaded once and served locally, so that a thumbnail
-    | swapped on YouTube later cannot change what you see. Only 16:9 variants
-    | are used; the 4:3 ones carry letterbox bars.
+    | swapped on YouTube later cannot change what you see.
+    |
+    | The URL is whatever YouTube returned. Google's documentation asks
+    | applications to use thumbnail URLs exactly as given rather than
+    | substituting domains or guessing at variants, and the real feeds bear
+    | that out: they return sharded hosts like i1.ytimg.com that no pattern
+    | would have predicted. Cropping to 16:9 is the UI's job.
     |
     */
 
     'images' => [
-        'preferred' => ['maxresdefault', 'mqdefault'],
         'disk' => 'local',
         'path' => 'calm-tube',
         'minimum_bytes' => 1024,

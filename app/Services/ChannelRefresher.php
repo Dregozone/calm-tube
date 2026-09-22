@@ -157,6 +157,7 @@ class ChannelRefresher
         }
 
         $this->enricher->detectShorts($created);
+        $this->enricher->archiveThumbnails($created);
 
         return $degradedBecause;
     }

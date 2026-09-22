@@ -167,23 +167,15 @@ function fakeShortsProbeFailure(): void
     ]);
 }
 
+/**
+ * Real feeds return sharded hosts (i1 to i4.ytimg.com), so the fake has to
+ * match the whole family rather than one guessed hostname.
+ */
 function fakeThumbnailDownloads(string $fixture = 'thumbnail.jpg'): void
 {
     Http::fake([
-        'i.ytimg.com/*' => Http::response(youtubeFixture($fixture), 200, ['Content-Type' => 'image/jpeg']),
-        'i4.ytimg.com/*' => Http::response(youtubeFixture($fixture), 200, ['Content-Type' => 'image/jpeg']),
-        'yt3.ggpht.com/*' => Http::response(youtubeFixture($fixture), 200, ['Content-Type' => 'image/jpeg']),
-    ]);
-}
-
-/**
- * maxresdefault is missing for older uploads; mqdefault always exists.
- */
-function fakeThumbnailDownloadsWithoutMaxres(): void
-{
-    Http::fake([
-        'i.ytimg.com/*/maxresdefault.jpg' => Http::response('', 404),
-        'i.ytimg.com/*' => Http::response(youtubeFixture('thumbnail.jpg'), 200, ['Content-Type' => 'image/jpeg']),
+        '*.ytimg.com/*' => Http::response(youtubeFixture($fixture), 200, ['Content-Type' => 'image/jpeg']),
+        '*.ggpht.com/*' => Http::response(youtubeFixture($fixture), 200, ['Content-Type' => 'image/jpeg']),
     ]);
 }
 

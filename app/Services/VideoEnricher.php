@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\LiveStatus;
 use App\Models\Video;
 use App\Services\YouTube\DataApiClient;
+use App\Services\YouTube\ImageArchiver;
 use App\Services\YouTube\ShortsDetector;
 use App\Support\VideoData;
 use Illuminate\Support\Collection;
@@ -21,6 +22,7 @@ class VideoEnricher
     public function __construct(
         private readonly DataApiClient $api,
         private readonly ShortsDetector $shorts,
+        private readonly ImageArchiver $images,
     ) {}
 
     /**
@@ -62,6 +64,30 @@ class VideoEnricher
 
             if ($isShort !== $video->is_short) {
                 $video->forceFill(['is_short' => $isShort])->save();
+            }
+        }
+    }
+
+    /**
+     * Downloads each thumbnail once, so a swap on YouTube later cannot change
+     * what you already have.
+     *
+     * Skipped for anything the feed will never show, which spares a Shorts
+     * heavy channel hundreds of pointless downloads.
+     *
+     * @param  Collection<int, Video>  $videos
+     */
+    public function archiveThumbnails(Collection $videos): void
+    {
+        foreach ($videos as $video) {
+            if ($video->isUnavailable() || $video->is_short === true) {
+                continue;
+            }
+
+            $path = $this->images->archiveThumbnail($video);
+
+            if ($path !== null && $path !== $video->thumbnail_path) {
+                $video->forceFill(['thumbnail_path' => $path])->save();
             }
         }
     }

@@ -5,6 +5,7 @@ use App\Exceptions\YouTubeException;
 use App\Jobs\RefreshChannel;
 use App\Models\Channel;
 use App\Services\YouTube\ChannelResolver;
+use App\Services\YouTube\ImageArchiver;
 use App\Support\RefreshResult;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Collection;
@@ -54,6 +55,12 @@ new #[Title('Channels')] class extends Component
         ]);
 
         $this->input = '';
+
+        $avatarPath = app(ImageArchiver::class)->archiveAvatar($created);
+
+        if ($avatarPath !== null) {
+            $created->forceFill(['avatar_path' => $avatarPath])->save();
+        }
 
         $result = RefreshChannel::dispatchSync($created);
         $imported = $result instanceof RefreshResult ? $result->newVideos : 0;

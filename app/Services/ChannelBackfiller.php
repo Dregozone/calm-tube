@@ -143,6 +143,7 @@ class ChannelBackfiller
         if ($created->isNotEmpty()) {
             $this->enricher->enrich($created);
             $this->enricher->detectShorts($created);
+            $this->enricher->archiveThumbnails($created);
 
             Log::channel('calm')->info('Channel backfilled', [
                 'channel_id' => $channel->youtube_channel_id,

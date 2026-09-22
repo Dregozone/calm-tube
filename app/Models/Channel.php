@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * A YouTube channel you have chosen to follow.
@@ -50,6 +51,21 @@ class Channel extends Model
 {
     /** @use HasFactory<ChannelFactory> */
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Channel $channel): void {
+            // The videos themselves go by database cascade, which fires no
+            // model events, so their archived images are removed here.
+            $channel->videos()->whereNotNull('thumbnail_path')->each(
+                fn (Video $video) => $video->deleteArchivedThumbnail()
+            );
+
+            if ($channel->avatar_path !== null) {
+                Storage::disk((string) config('calm-tube.images.disk'))->delete($channel->avatar_path);
+            }
+        });
+    }
 
     /**
      * Channel ids are YouTube's, so URLs map one to one with youtube.com.

@@ -509,26 +509,20 @@ https://i.ytimg.com/vi/{VIDEO_ID}/hqdefault.jpg        480×360, 4:3 with bars  
 https://i.ytimg.com/vi/{VIDEO_ID}/mqdefault.jpg        320×180, 16:9, ~12 KB, always present
 ```
 
-**Order: `maxresdefault` → `mqdefault`.** The 4:3 variants are skipped entirely because they
-carry black letterbox bars that would need cropping. `maxresdefault` 404s for older or
-lower-resolution uploads, which is the whole reason for the fallback.
+**The URL is never constructed.** Google's documentation asks applications to use thumbnail
+URLs exactly as returned, and real data shows why: the feeds return sharded hosts like
+`i1.ytimg.com` through `i4.ytimg.com`, which no guessed pattern would have produced. Where a
+response carries a whole thumbnails map — `playlistItems.list` does — the largest variant
+present is chosen, because YouTube only includes `maxres` for uploads that have one.
 
-```php
-foreach (config('calm-tube.images.preferred') as $variant) {
-    $response = Http::timeout(10)->get("https://i.ytimg.com/vi/{$id}/{$variant}.jpg");
+The consequence is that RSS-discovered videos archive `hqdefault`, which is 480×360 with
+letterbox bars. Cropping that to 16:9 is the UI's job (`object-cover` on a 16:9 container
+removes exactly the bars), and it keeps the archive honest: what is stored is what YouTube
+served.
 
-    if ($response->successful() && $response->header('Content-Type') === 'image/jpeg') {
-        Storage::disk($disk)->put("calm-tube/thumbnails/{$id}.jpg", $response->body());
-        return "calm-tube/thumbnails/{$id}.jpg";
-    }
-}
-
-return null;   // route falls back to thumbnail_url
-```
-
-A 404 on `maxresdefault` returns a small JPEG placeholder rather than an HTTP error in some
-cases, so check `Content-Length` as well: anything under ~1 KB is the placeholder, not a
-thumbnail.
+A missing image is answered with a tiny grey placeholder rather than a 404, so anything under
+`images.minimum_bytes` (1 KB) is rejected and the video falls back to hotlinking until the
+next `calm:archive` retries it.
 
 Avatars come from `channels.list` → `snippet.thumbnails.high.url` and are re-fetched only when
 you explicitly refresh channel metadata, not on every video refresh.

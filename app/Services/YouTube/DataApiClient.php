@@ -151,8 +151,27 @@ class DataApiClient
             title: $title,
             description: $this->text(data_get($item, 'snippet.description')),
             publishedAt: CarbonImmutable::parse($published),
-            thumbnailUrl: $this->text(data_get($item, 'snippet.thumbnails.high.url')),
+            thumbnailUrl: $this->largestThumbnail(data_get($item, 'snippet.thumbnails')),
         );
+    }
+
+    /**
+     * The biggest variant present in the response, taken as given.
+     *
+     * YouTube only includes maxres for uploads that have one, so picking from
+     * what is there avoids guessing at a URL that may not exist.
+     */
+    private function largestThumbnail(mixed $thumbnails): ?string
+    {
+        foreach (['maxres', 'standard', 'high', 'medium', 'default'] as $variant) {
+            $url = $this->text(data_get($thumbnails, "{$variant}.url"));
+
+            if ($url !== null) {
+                return $url;
+            }
+        }
+
+        return null;
     }
 
     public function channelById(string $channelId): ?ChannelData

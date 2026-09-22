@@ -31,3 +31,11 @@ Schedule::command('calm:refresh', ['--scheduled'])
 Schedule::command('calm:enrich')
     ->dailyAt('04:00')
     ->withoutOverlapping();
+
+/*
+ * Retries images that failed to download, so a dropped connection does not
+ * leave one card hotlinking from YouTube forever.
+ */
+Schedule::command('calm:archive')
+    ->dailyAt('04:30')
+    ->withoutOverlapping();

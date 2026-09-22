@@ -25,14 +25,10 @@ it('defines the settings the app tunes itself with', function (string $key): voi
     'calm-tube.shorts.probe',
     'calm-tube.shorts.probe_max_seconds',
     'calm-tube.shorts.fallback_max_seconds',
-    'calm-tube.images.preferred',
+    'calm-tube.images.minimum_bytes',
     'calm-tube.images.disk',
     'calm-tube.feed.per_page',
 ]);
-
-it('prefers the largest thumbnail and falls back to the smallest 16:9 one', function (): void {
-    expect(config('calm-tube.images.preferred'))->toBe(['maxresdefault', 'mqdefault']);
-});
 
 it('sets the Shorts thresholds to keep genuinely short videos', function (): void {
     expect(config('calm-tube.shorts.probe_max_seconds'))->toBe(180)

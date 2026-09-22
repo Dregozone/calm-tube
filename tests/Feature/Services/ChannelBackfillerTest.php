@@ -32,7 +32,8 @@ it('archives the title, description and publication date of a recovered video', 
     expect($video->title)->toBe('Backfilled Video 001')
         ->and($video->description)->toContain('Description for backfilled video 001.')
         ->and($video->published_at->toDateString())->toBe('2026-03-14')
-        ->and($video->thumbnail_url)->toBe('https://i.ytimg.com/vi/bkfilvid001/hqdefault.jpg');
+        // The largest variant the response carried, taken as given.
+        ->and($video->thumbnail_url)->toBe('https://i.ytimg.com/vi/bkfilvid001/maxresdefault.jpg');
 });
 
 it('uses the date the video was published, not the date it joined the playlist', function (): void {

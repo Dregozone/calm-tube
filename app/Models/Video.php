@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * One upload from a followed channel.
@@ -62,6 +63,25 @@ class Video extends Model
 {
     /** @use HasFactory<VideoFactory> */
     use HasFactory;
+
+    protected static function booted(): void
+    {
+        static::deleting(function (Video $video): void {
+            $video->deleteArchivedThumbnail();
+        });
+    }
+
+    /**
+     * The archived image outlives YouTube, so it only goes when the row does.
+     */
+    public function deleteArchivedThumbnail(): void
+    {
+        if ($this->thumbnail_path === null) {
+            return;
+        }
+
+        Storage::disk((string) config('calm-tube.images.disk'))->delete($this->thumbnail_path);
+    }
 
     /**
      * Video ids are YouTube's, so /watch/{id} maps one to one with youtube.com.
