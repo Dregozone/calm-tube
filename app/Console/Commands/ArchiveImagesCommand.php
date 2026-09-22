@@ -35,10 +35,16 @@ class ArchiveImagesCommand extends Command
         foreach ($this->channels() as $channel) {
             $path = $archiver->archiveAvatar($channel);
 
-            if ($path !== null) {
-                $channel->forceFill(['avatar_path' => $path])->save();
-                $archived++;
+            if ($path === null) {
+                // Counted, not swallowed: avatars come from a different host
+                // to thumbnails, so they can fail on their own.
+                $failed++;
+
+                continue;
             }
+
+            $channel->forceFill(['avatar_path' => $path])->save();
+            $archived++;
         }
 
         $videos = $this->videos();

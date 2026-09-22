@@ -527,8 +527,10 @@ next `calm:archive` retries it.
 Avatars come from `channels.list` → `snippet.thumbnails.high.url` and are re-fetched only when
 you explicitly refresh channel metadata, not on every video refresh.
 
-**Storage:** ~120 KB per video at ~3,000 videos/year ≈ **350 MB/year**. Shorts are excluded
-from archiving, so the real figure is lower.
+**Storage:** measured, not estimated. A real 758-image archive came to **16 MB, averaging
+22 KB per thumbnail** — far below the 120 KB the original design assumed, because RSS supplies
+`hqdefault` rather than `maxres`. At ~3,000 videos a year that is roughly **66 MB/year**, and
+Shorts are excluded entirely, so the real figure is lower still.
 
 ---
 

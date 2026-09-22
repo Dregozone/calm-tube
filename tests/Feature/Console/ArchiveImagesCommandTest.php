@@ -85,3 +85,15 @@ it('leaves a channel with no avatar url alone', function (): void {
 
     Http::assertNothingSent();
 });
+
+it('counts an avatar it could not download, rather than passing over it', function (): void {
+    Http::fake(['*.ggpht.com/*' => Http::failedConnection()]);
+    calmChannel([
+        'avatar_url' => 'https://yt3.ggpht.com/calm-avatar=s800',
+        'avatar_path' => null,
+    ]);
+
+    $this->artisan('calm:archive')
+        ->expectsOutputToContain('1 could not be downloaded')
+        ->assertSuccessful();
+});
