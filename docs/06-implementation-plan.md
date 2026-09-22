@@ -133,7 +133,8 @@ The heart of the app.
 
 - `RssFeedClient` — fetch, conditional headers, parse, `FeedEntry` value objects.
 - `ChannelRefresher::refresh()` — steps 1–4 and 8 of the data flow (no enrichment yet).
-- `RefreshChannel` job, dispatched with `dispatchSync()`.
+- `RefreshChannel` job, dispatched with `dispatchSync()` (not a `ShouldQueue`; see
+  [02-architecture.md](02-architecture.md#refreshchannel-job)).
 - `RefreshResult` value object.
 - `calm:refresh {--channel=}` command.
 - `Schedule::command('calm:refresh')->hourly()->withoutOverlapping()` in `routes/console.php`.

@@ -126,8 +126,14 @@ that knows the *order* of operations, and the only place that writes to `videos`
 
 ### `RefreshChannel` job
 
-A thin `ShouldQueue` wrapper around `ChannelRefresher`, always invoked with `dispatchSync()`.
-It exists so that moving to a real queue later is a one-word change.
+A thin wrapper around `ChannelRefresher`, always invoked with `dispatchSync()`. It exists so
+that moving to a real queue later is a small, local change.
+
+It is deliberately **not** a `ShouldQueue`. Laravel routes a `ShouldQueue` job dispatched with
+`dispatchSync()` through the sync *queue driver*, which returns the queue's push result rather
+than the handler's — and every caller needs the `RefreshResult` back to report what happened.
+Adding the interface, and swapping `dispatchSync` for `dispatch`, is the switch to real
+queueing.
 
 ## Refresh execution model
 
@@ -138,9 +144,10 @@ has to be running or refreshes silently do nothing — the single most likely wa
 to appear broken. With ~30 channels a full refresh is a few seconds of HTTP, which is a
 perfectly reasonable thing to wait on behind a Livewire loading state.
 
-The escape hatch: because the unit of work is a `ShouldQueue` job invoked via `dispatchSync()`,
-switching to background refreshes later means changing `dispatchSync` to `dispatch` and
-starting a worker. Nothing else moves.
+The escape hatch: because the unit of work is a job, switching to background refreshes later
+means adding `implements ShouldQueue`, changing `dispatchSync` to `dispatch`, and starting a
+worker. The callers stop getting a result back, so their feedback messages change, and nothing
+else moves.
 
 Both entry points converge on the same job:
 

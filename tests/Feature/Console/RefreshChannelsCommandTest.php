@@ -12,7 +12,9 @@ const OTHER_CHANNEL_ID = 'UCsecondchannelidabcdefg';
 
 it('refreshes every enabled channel', function (): void {
     Storage::fake('local');
-    fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
+    fakeFeedSequence('feed-single-entry.xml', 'feed-other-single.xml');
+    fakeVideosList();
+    fakeThumbnailDownloads();
     calmChannel();
     Channel::factory()->create(['youtube_channel_id' => OTHER_CHANNEL_ID]);
 
@@ -84,8 +86,9 @@ it('runs each refresh synchronously, so no queue worker is needed', function ():
 
     $this->artisan('calm:refresh')->assertSuccessful();
 
+    // Had the command queued the job instead, nothing would have been
+    // recorded as dispatched synchronously and this would fail.
     Bus::assertDispatchedSync(RefreshChannel::class);
-    Bus::assertNotDispatched(RefreshChannel::class);
 });
 
 it('does nothing when no channels are followed', function (): void {
