@@ -58,6 +58,14 @@ return [
             'ignore_exceptions' => false,
         ],
 
+        'calm' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/calm-tube.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'days' => 14,
+            'replace_placeholders' => true,
+        ],
+
         'single' => [
             'driver' => 'single',
             'path' => storage_path('logs/laravel.log'),

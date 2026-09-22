@@ -134,7 +134,7 @@ describe('add form errors', function (): void {
     });
 
     it('explains that a handle needs an API key', function (): void {
-        config()->set('calm-tube.api_key', null);
+        config()->set('calm-tube.api_key');
 
         Livewire::test('pages::channels.index')
             ->set('input', '@practicalengineering')
@@ -147,7 +147,7 @@ describe('add form errors', function (): void {
 
     it('still adds a channel id without an API key', function (): void {
         Storage::fake('local');
-        config()->set('calm-tube.api_key', null);
+        config()->set('calm-tube.api_key');
         fakeFeed('feed-single-entry.xml');
         fakeShortsProbe();
         fakeThumbnailDownloads();

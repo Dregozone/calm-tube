@@ -90,7 +90,7 @@ describe('resolve', function (): void {
 
 describe('resolve without an API key', function (): void {
     beforeEach(function (): void {
-        config()->set('calm-tube.api_key', null);
+        config()->set('calm-tube.api_key');
     });
 
     it('resolves a channel id from the RSS feed', function (): void {

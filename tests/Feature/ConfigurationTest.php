@@ -9,7 +9,7 @@ it('sends the root url to the feed', function (): void {
 });
 
 it('works with no YouTube API key configured', function (): void {
-    config()->set('calm-tube.api_key', null);
+    config()->set('calm-tube.api_key');
     Video::factory()->for(calmChannel())->create();
 
     $this->actingAs(calmUser())

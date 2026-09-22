@@ -212,7 +212,7 @@ describe('Shorts', function (): void {
 describe('degrading without the API', function (): void {
     it('still ingests videos when no API key is configured', function (): void {
         Storage::fake('local');
-        config()->set('calm-tube.api_key', null);
+        config()->set('calm-tube.api_key');
         fakeFeed('feed-single-entry.xml');
         fakeShortsProbe();
         fakeThumbnailDownloads();
@@ -228,7 +228,7 @@ describe('degrading without the API', function (): void {
 
     it('sends no API request when no key is configured', function (): void {
         Storage::fake('local');
-        config()->set('calm-tube.api_key', null);
+        config()->set('calm-tube.api_key');
         fakeFeed('feed-single-entry.xml');
         fakeShortsProbe();
         fakeThumbnailDownloads();

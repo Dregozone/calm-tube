@@ -177,7 +177,7 @@ describe('refreshing', function (): void {
 
 describe('degraded mode', function (): void {
     it('warns when no API key is configured', function (): void {
-        config()->set('calm-tube.api_key', null);
+        config()->set('calm-tube.api_key');
         Video::factory()->for(calmChannel())->create();
 
         Livewire::test('pages::feed')->assertSee('API key');

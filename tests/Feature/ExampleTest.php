@@ -1,7 +1,7 @@
 <?php
 
-test('returns a successful response', function () {
+test('the home route sends you to the feed', function () {
     $response = $this->get(route('home'));
 
-    $response->assertOk();
+    $response->assertRedirect(route('feed'));
 });

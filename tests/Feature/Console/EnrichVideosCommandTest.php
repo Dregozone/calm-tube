@@ -86,7 +86,7 @@ it('leaves an enriched video alone', function (): void {
 });
 
 it('does nothing when no API key is configured', function (): void {
-    config()->set('calm-tube.api_key', null);
+    config()->set('calm-tube.api_key');
     Video::factory()->for(calmChannel())->unenriched()->create();
 
     $this->artisan('calm:enrich')

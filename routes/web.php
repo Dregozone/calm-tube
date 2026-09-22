@@ -2,10 +2,11 @@
 
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'welcome')->name('home');
+Route::redirect('/', '/feed')->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
-    Route::view('dashboard', 'dashboard')->name('dashboard');
+Route::middleware('auth')->group(function (): void {
+    Route::livewire('feed', 'pages::feed')->name('feed');
+    Route::livewire('channels', 'pages::channels.index')->name('channels.index');
 });
 
 require __DIR__.'/settings.php';
