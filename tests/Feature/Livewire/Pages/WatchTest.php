@@ -197,3 +197,27 @@ it('redirects a guest to the login page', function (): void {
 
     $this->get(route('videos.watch', $video))->assertRedirect(route('login'));
 });
+
+describe('the player script', function (): void {
+    it('delivers the IFrame API wiring, without which the end of a video is never noticed', function (string $needle): void {
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))->assertSee($needle, escape: false);
+    })->with([
+        // Slashes arrive escaped, the script riding in Livewire's JSON payload.
+        'the API script' => ['iframe_api'],
+        'the ready callback' => ['onYouTubeIframeAPIReady'],
+        'the ended state' => ['YT.PlayerState.ENDED'],
+        'marking watched from the player' => ['markWatched'],
+    ]);
+
+    it('binds to the iframe already in the page rather than building one', function (): void {
+        $video = watchable();
+
+        // The iframe is server rendered so the embed parameters are fixed and
+        // testable; the API attaches to it by id.
+        $this->get(route('videos.watch', $video))
+            ->assertSee('id="calm-player"', escape: false)
+            ->assertSee('new YT.Player(frame', escape: false);
+    });
+});
