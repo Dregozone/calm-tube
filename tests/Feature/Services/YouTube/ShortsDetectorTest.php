@@ -114,3 +114,30 @@ it('respects a configured ceiling', function (): void {
     expect($this->detector->isShort(videoLasting(95)))->toBeFalse();
     Http::assertNothingSent();
 });
+
+it('sends a consent choice, so YouTube answers instead of redirecting to its interstitial', function (): void {
+    fakeShortsProbe(200);
+
+    $this->detector->isShort(videoLasting(45));
+
+    Http::assertSent(fn (Request $request): bool => str_contains(
+        (string) $request->header('Cookie')[0], 'SOCS='
+    ));
+});
+
+it('treats a redirect anywhere but the watch page as no answer at all', function (int $seconds, ?bool $expected): void {
+    fakeShortsConsentRedirect();
+
+    expect($this->detector->isShort(videoLasting($seconds)))->toBe($expected);
+})->with([
+    'under a minute falls back to a Short' => [42, true],
+    'over a minute falls back to an ordinary video' => [95, false],
+]);
+
+it('does not mistake the consent interstitial for an ordinary video', function (): void {
+    fakeShortsConsentRedirect();
+
+    // 6 seconds is unmistakably a Short; reading the consent bounce as an
+    // answer is what let 141 of them into the library.
+    expect($this->detector->isShort(videoLasting(6)))->toBeTrue();
+});

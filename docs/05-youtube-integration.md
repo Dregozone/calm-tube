@@ -385,6 +385,26 @@ short real videos worth keeping — exactly the 1.5–2.5 minute range.
 Short, and **redirects to `/watch?v={id}`** for anything else. One status code, one request,
 no quota, no parsing.
 
+**It needs a consent cookie.** Without one, YouTube answers every EU and UK request with a
+`302` to `consent.youtube.com`, whatever the video is. Sending `Cookie: SOCS=CAI` makes it
+serve the real answer. The older `CONSENT=YES+1` cookie no longer works — verified against
+live YouTube:
+
+| Cookie sent | 6s Short | 17s Short | 954s ordinary video |
+| --- | --- | --- | --- |
+| none | 302 → consent | 302 → consent | 302 → consent |
+| `CONSENT=YES+1` | 302 → consent | 302 → consent | 302 → consent |
+| **`SOCS=CAI`** | **200** | **200** | **303 → /watch** |
+
+The cookie records a consent choice. It carries no account, no session and no identity, and
+without it the probe cannot see the answer at all.
+
+**Only a redirect to `/watch` is an answer.** This is the lesson from getting it wrong: the
+first implementation treated any `3xx` as "ordinary video", so the consent bounce marked
+every probed video as not-a-Short — 136 real Shorts went undetected in a 390-video library.
+A redirect anywhere else says nothing about the video and must fall through to the duration
+rule instead.
+
 ### Algorithm
 
 ```php
@@ -405,6 +425,7 @@ public function isShort(Video $video): ?bool
     if (config('calm-tube.shorts.probe')) {
         try {
             $response = Http::withOptions(['allow_redirects' => false])
+                ->withHeaders(['Cookie' => 'SOCS=CAI'])
                 ->timeout(5)
                 ->head("https://www.youtube.com/shorts/{$video->youtube_video_id}");
 
@@ -412,7 +433,8 @@ public function isShort(Video $video): ?bool
                 return true;
             }
 
-            if ($response->redirect()) {
+            // Only the watch page. A consent or sign-in redirect is not an answer.
+            if ($this->redirectsToWatchPage($response->header('Location'))) {
                 return false;
             }
         } catch (ConnectionException $e) {
@@ -435,6 +457,8 @@ public function isShort(Video $video): ?bool
 | 181s | — | `false` | 0 |
 | 95s | 200 | `true` | 1 |
 | 95s | 303 → `/watch` | `false` | 1 |
+| 95s | 302 → `consent.youtube.com` | `false` (fallback: > 60s) | 1 |
+| 42s | 302 → `consent.youtube.com` | `true` (fallback: ≤ 60s) | 1 |
 | 95s | connection error | `false` (fallback: > 60s) | 1 |
 | 42s | connection error | `true` (fallback: ≤ 60s) | 1 |
 | `null` (no API key) | 200 | `true` | 1 |
@@ -455,6 +479,11 @@ lifetime cost is one `HEAD` per short candidate, ever.
 - **Undocumented behaviour.** This redirect is not a contract; YouTube could change it. If it
   does, the fallback silently takes over and Shorts between 60s and 180s start appearing. The
   test suite pins both paths so a change is visible when it happens.
+- **The consent cookie is the fragile part.** Google has changed it once already
+  (`CONSENT` → `SOCS`). If it changes again, every probe returns the consent redirect, which
+  is now correctly read as "no answer", so detection falls back to the 60-second rule rather
+  than silently marking Shorts as ordinary videos. That is the safe direction to fail in, but
+  Shorts between 60s and 180s would start appearing, which is the signal to check this.
 - **`HEAD` may be rejected.** If YouTube ever stops answering `HEAD` here, switch to `GET`
   with `allow_redirects => false` and discard the body — the status code is all we read.
 - **Retroactive conversions.** A video's Short status is fixed at ingest. This has never been

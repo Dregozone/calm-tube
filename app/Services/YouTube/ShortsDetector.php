@@ -23,6 +23,14 @@ class ShortsDetector
     private const int PROBE_TIMEOUT = 5;
 
     /**
+     * Records a consent choice so YouTube serves the page instead of bouncing
+     * the request to its consent interstitial, which it does for every EU and
+     * UK request that arrives without one. It carries no account and no
+     * identity; without it the probe cannot see the answer at all.
+     */
+    private const string CONSENT_COOKIE = 'SOCS=CAI';
+
+    /**
      * Null means detection could not decide, and an undecided video is shown.
      */
     public function isShort(Video $video): ?bool
@@ -53,6 +61,7 @@ class ShortsDetector
     {
         try {
             $response = Http::withOptions(['allow_redirects' => false])
+                ->withHeaders(['Cookie' => self::CONSENT_COOKIE])
                 ->timeout(self::PROBE_TIMEOUT)
                 ->head("https://www.youtube.com/shorts/{$videoId}");
         } catch (ConnectionException) {
@@ -65,17 +74,30 @@ class ShortsDetector
             return true;
         }
 
-        // Redirected to the watch page, so an ordinary video.
-        if ($response->status() >= 300 && $response->status() < 400) {
+        // Only a redirect to the watch page means "ordinary video". Anything
+        // else redirecting — the consent interstitial, a sign-in wall — says
+        // nothing about the video, and must not be read as an answer.
+        if ($this->redirectsToWatchPage($response->header('Location'))) {
             return false;
         }
 
         Log::channel('calm')->warning('Shorts probe was inconclusive', [
             'video_id' => $videoId,
             'status' => $response->status(),
+            'location' => $response->header('Location'),
         ]);
 
         return null;
+    }
+
+    private function redirectsToWatchPage(?string $location): bool
+    {
+        if ($location === null || $location === '') {
+            return false;
+        }
+
+        return parse_url($location, PHP_URL_HOST) === 'www.youtube.com'
+            && parse_url($location, PHP_URL_PATH) === '/watch';
     }
 
     /**

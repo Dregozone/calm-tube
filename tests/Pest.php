@@ -121,9 +121,22 @@ function fakeChannelsList(string $fixture = 'channels.list.json', int $status = 
 function fakeShortsProbe(int $status = 303): void
 {
     Http::fake([
-        'www.youtube.com/shorts/*' => Http::response('', $status, $status === 303
-            ? ['Location' => 'https://www.youtube.com/watch?v='.CALM_VIDEO_ID]
-            : []),
+        'www.youtube.com/shorts/*' => Http::response('', $status, $status === 200
+            ? []
+            : ['Location' => 'https://www.youtube.com/watch?v='.CALM_VIDEO_ID]),
+    ]);
+}
+
+/**
+ * YouTube bounces every EU and UK request that arrives without a consent
+ * choice to its interstitial, whatever the video is.
+ */
+function fakeShortsConsentRedirect(): void
+{
+    Http::fake([
+        'www.youtube.com/shorts/*' => Http::response('', 302, [
+            'Location' => 'https://consent.youtube.com/m?continue=https%3A%2F%2Fwww.youtube.com%2Fshorts%2F'.CALM_VIDEO_ID,
+        ]),
     ]);
 }
 
