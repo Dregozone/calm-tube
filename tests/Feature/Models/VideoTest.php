@@ -4,7 +4,7 @@ use App\Enums\LiveStatus;
 use App\Models\Channel;
 use App\Models\RefreshRun;
 use App\Models\Video;
-use Illuminate\Support\Carbon;
+use Carbon\CarbonImmutable;
 
 it('orders the feed by publication date, newest first', function (): void {
     $channel = Channel::factory()->create();
@@ -72,7 +72,7 @@ it('casts its state columns', function (): void {
     $video = Video::factory()->for(Channel::factory())->live()->create();
 
     expect($video->live_status)->toBe(LiveStatus::Live)
-        ->and($video->published_at)->toBeInstanceOf(Carbon::class);
+        ->and($video->published_at)->toBeInstanceOf(CarbonImmutable::class);
 });
 
 it('formats its duration for display', function (?int $seconds, ?string $expected): void {
