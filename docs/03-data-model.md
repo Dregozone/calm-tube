@@ -130,6 +130,22 @@ Note the `is_short` clause: **null is treated as not-a-Short**, so a video whose
 failed is shown rather than silently swallowed. The probe is what decides; an unknown never
 hides something you wanted.
 
+## `mixes`
+
+Long music videos played from the music page. Standalone: no channel, never in the feed.
+
+| Column | Type | Nullable | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | bigint | no | | |
+| `youtube_video_id` | string(11) | no | | Unique; the route key |
+| `title` | string | no | | From oEmbed, archived once and never updated |
+| `author_name` | string | yes | `null` | From oEmbed |
+| `thumbnail_url` | string | yes | `null` | As oEmbed returned it |
+| `thumbnail_path` | string | yes | `null` | Archived copy, served by `mixes.thumbnail` |
+| `duration_seconds` | int | yes | `null` | From `videos.list` with a key, otherwise from the player on first play |
+| `resume_seconds` | int | yes | `null` | Where playback got to |
+| `last_played_at` | timestamp | yes | `null` | |
+
 ## `refresh_runs`
 
 Powers the "last refreshed" timestamp, per-channel refresh history and error display without

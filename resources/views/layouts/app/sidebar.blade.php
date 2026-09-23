@@ -20,6 +20,10 @@
                 <flux:sidebar.item icon="rectangle-stack" :href="route('channels.index')" :current="request()->routeIs('channels.*')" wire:navigate>
                     {{ __('Channels') }}
                 </flux:sidebar.item>
+
+                <flux:sidebar.item icon="musical-note" :href="route('music')" :current="request()->routeIs('music')" wire:navigate>
+                    {{ __('Music') }}
+                </flux:sidebar.item>
             </flux:sidebar.nav>
 
             <flux:spacer />

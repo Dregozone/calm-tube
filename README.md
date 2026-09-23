@@ -128,6 +128,23 @@ and speed is not the goal.
 
 ---
 
+## Music
+
+Long mixes to put on in the background: **Music** in the sidebar. Paste a YouTube link and it
+joins the list below the form; press play on a card and it plays right there, in place of its
+thumbnail, without leaving the page.
+
+- Play/pause, start again, and a progress bar you can click to jump.
+- Only one mix plays at a time, and a mix that ends starts again.
+- Each mix remembers where you stopped. Leaving the page stops the music and keeps your place,
+  so open it in its own tab to keep it going while you browse.
+- `Space` plays or pauses the last mix you played.
+
+Mixes are kept apart from your channels and never appear in the feed. Adding one needs no API
+key.
+
+---
+
 ## Working through a backlog
 
 The feed opens on **Unwatched**, and remembers whichever you last chose after that.

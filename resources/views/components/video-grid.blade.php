@@ -1,7 +1,6 @@
 {{--
     Columns follow the space the grid actually has, not the window, so
-    collapsing the sidebar can add some. The counts all divide a page of 24
-    into whole rows, and stop at six: any more and the thumbnails are too
+    collapsing the sidebar can add some. The counts stop at six: any more and the thumbnails are too
     small to read at a glance. Breakpoints are in rem, not px: Tailwind cannot
     order the two against each other, and a px rule emitted before @4xl loses
     to it.

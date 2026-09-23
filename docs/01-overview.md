@@ -63,7 +63,7 @@ Calm Tube is built to stay inside YouTube's Terms of Service. Concretely:
 | No downloading or extracting streams | The app never touches video or audio streams. No `yt-dlp`, no format URLs, no proxying of media. |
 | Views must be attributable | The embedded player reports playback to YouTube exactly as it would on youtube.com. Creators get their view. |
 | Don't circumvent the platform | An "Open on YouTube" link is on every watch page. Comments, likes and subscribing all happen on YouTube, by design. |
-| Use public/official data sources | Metadata comes from each channel's public RSS feed and the official YouTube Data API v3 with a personal API key. |
+| Use public/official data sources | Metadata comes from each channel's public RSS feed, the official YouTube Data API v3 with a personal API key, and YouTube's public oEmbed endpoint for mixes added to the music page. |
 
 ### The two grey areas, stated plainly
 

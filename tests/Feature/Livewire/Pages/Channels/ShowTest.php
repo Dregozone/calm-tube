@@ -55,6 +55,7 @@ it('filters this channel down to unwatched', function (): void {
 });
 
 it('paginates a long back catalogue', function (): void {
+    config()->set('calm-tube.feed.per_page', 24);
     $channel = calmChannel();
     Video::factory()->for($channel)->count(30)->create();
 

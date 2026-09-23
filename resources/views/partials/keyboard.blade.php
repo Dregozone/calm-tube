@@ -86,6 +86,12 @@
         ],
     ];
 
+    if (request()->routeIs('music')) {
+        $shortcutGroups[__('Music')] = [
+            ['Space', null, __('Play or pause the last mix you played')],
+        ];
+    }
+
     if (request()->routeIs('videos.watch')) {
         $shortcutGroups[__('Watching')] = [
             ['Space', null, __('Play or pause (or resume)')],

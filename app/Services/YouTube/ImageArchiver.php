@@ -3,6 +3,7 @@
 namespace App\Services\YouTube;
 
 use App\Models\Channel;
+use App\Models\Mix;
 use App\Models\Video;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Http;
@@ -29,6 +30,18 @@ class ImageArchiver
         return $this->archive(
             $video->thumbnail_url,
             $this->path('thumbnails', $video->youtube_video_id),
+        );
+    }
+
+    public function archiveMixThumbnail(Mix $mix): ?string
+    {
+        if ($mix->thumbnail_path !== null) {
+            return $mix->thumbnail_path;
+        }
+
+        return $this->archive(
+            $mix->thumbnail_url,
+            $this->path('mixes', $mix->youtube_video_id),
         );
     }
 

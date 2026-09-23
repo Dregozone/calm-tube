@@ -44,12 +44,14 @@ it('does not offer a way to show Shorts', function (): void {
 
 describe('pagination', function (): void {
     it('shows one page of videos at a time', function (): void {
+        config()->set('calm-tube.feed.per_page', 24);
         Video::factory()->for(calmChannel())->count(30)->create();
 
         Livewire::test('pages::feed')->assertViewHas('videos', fn ($videos): bool => $videos->count() === 24);
     });
 
     it('shows the rest on the next page', function (): void {
+        config()->set('calm-tube.feed.per_page', 24);
         Video::factory()->for(calmChannel())->count(30)->create();
 
         Livewire::test('pages::feed')

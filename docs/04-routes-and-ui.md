@@ -3,7 +3,7 @@
 ## Route table
 
 All app routes sit behind `auth`. Livewire 4 page components are registered with
-`Route::livewire()`; only the two image endpoints are plain controllers.
+`Route::livewire()`; only the three image endpoints are plain controllers.
 
 | Method | URI | Component / action | Name |
 | --- | --- | --- | --- |
@@ -12,8 +12,10 @@ All app routes sit behind `auth`. Livewire 4 page components are registered with
 | GET | `/watch/{video}` | `pages::watch` | `videos.watch` |
 | GET | `/channels` | `pages::channels.index` | `channels.index` |
 | GET | `/channels/{channel}` | `pages::channels.show` | `channels.show` |
+| GET | `/music` | `pages::music` | `music` |
 | GET | `/thumbnails/{video}` | `ThumbnailController` | `thumbnails.show` |
 | GET | `/avatars/{channel}` | `AvatarController` | `avatars.show` |
+| GET | `/music/{mix}/thumbnail` | `MixThumbnailController` | `mixes.thumbnail` |
 
 ```php
 // routes/web.php
@@ -24,9 +26,11 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('watch/{video}', 'pages::watch')->name('videos.watch');
     Route::livewire('channels', 'pages::channels.index')->name('channels.index');
     Route::livewire('channels/{channel}', 'pages::channels.show')->name('channels.show');
+    Route::livewire('music', 'pages::music')->name('music');
 
     Route::get('thumbnails/{video}', ThumbnailController::class)->name('thumbnails.show');
     Route::get('avatars/{channel}', AvatarController::class)->name('avatars.show');
+    Route::get('music/{mix}/thumbnail', MixThumbnailController::class)->name('mixes.thumbnail');
 });
 ```
 
@@ -595,6 +599,28 @@ whether you still follow the channel.
 failed, the error and its timestamp instead.
 
 ---
+
+## Screen 5 — Music (`/music`)
+
+Long music videos to put on in the background — hour-long mixes that are really audio over a
+still picture. They are kept apart from everything else: a mix is added by hand, one link at a
+time, never belongs to a followed channel, and never reaches the feed.
+
+- **Adding.** Paste any video link the channel form understands (watch, `youtu.be`, embed,
+  live, Shorts, or a watch link inside a playlist) or a bare video id. The title, author and
+  thumbnail come from YouTube's keyless oEmbed endpoint and are archived once, like a video's.
+  oEmbed also refuses a video that cannot be embedded, so nothing unplayable is ever added. The
+  length comes from `videos.list` when there is a key, otherwise from the player on first play.
+- **Playing.** One `YT.Player` for the whole page, moved to whichever card you press play on,
+  so two mixes never play at once. It replaces that card's thumbnail and stays visible — the
+  API terms forbid a hidden or audio-only player, and a mix's picture is all it shows anyway.
+  Under each card: play/pause, start again, a click-to-jump progress bar, and the time.
+- **Remembering.** Position is saved every 10 seconds, on pause, on leaving the page and when
+  switching mixes; pressing play carries on from there.
+- **Looping.** A mix that ends starts again. Background music that runs out is a silence you
+  have to notice; nothing else is ever chosen for you.
+- **Leaving** the page stops the music (and keeps your place). Space plays or pauses the last
+  mix you played.
 
 ## Image routes
 

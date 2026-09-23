@@ -180,6 +180,29 @@ function fakeThumbnailDownloads(string $fixture = 'thumbnail.jpg'): void
 }
 
 /**
+ * YouTube's oEmbed answer for one video, or just a status for a video it
+ * will not describe (401 private or not embeddable, 404 gone).
+ *
+ * @param  array<string, string>  $overrides
+ */
+function fakeOEmbed(int $status = 200, array $overrides = []): void
+{
+    Http::fake([
+        'www.youtube.com/oembed*' => $status === 200
+            ? Http::response([
+                'title' => '2 Hours of Calm Jazz for Deep Work',
+                'author_name' => 'Quiet Rooms',
+                'author_url' => 'https://www.youtube.com/@quietrooms',
+                'type' => 'video',
+                'provider_name' => 'YouTube',
+                'thumbnail_url' => 'https://i.ytimg.com/vi/'.CALM_VIDEO_ID.'/hqdefault.jpg',
+                ...$overrides,
+            ])
+            : Http::response('Not Found', $status),
+    ]);
+}
+
+/**
  * Fakes every YouTube endpoint a full, successful refresh touches.
  */
 function fakeSuccessfulRefresh(string $feedFixture = 'feed.xml', string $videosFixture = 'videos.list.json'): void
