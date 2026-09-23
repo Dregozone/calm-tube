@@ -36,6 +36,10 @@ return [
         'timeout' => 10,
         'retries' => 2,
         'retry_delay' => 1000,
+
+        // Refresh history is operational log data, not part of the archive,
+        // and it is the only thing this app ever deletes on a schedule.
+        'keep_runs_for_days' => 30,
     ],
 
     /*
@@ -98,6 +102,14 @@ return [
     'player' => [
         'playback_rates' => [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0],
         'countdown_seconds' => 5,
+
+        // YouTube draws clickable end cards over the last seconds of a video,
+        // inside the iframe where no embed parameter can remove them. For that
+        // stretch a transparent layer covers the picture and swallows the
+        // clicks; the control bar stays exposed, and clicking the layer
+        // pauses, which is what clicking a video is for. Set to 0 to allow
+        // end cards through.
+        'end_card_mask_seconds' => 20,
     ],
 
     /*

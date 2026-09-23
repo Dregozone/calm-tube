@@ -88,6 +88,8 @@
             </flux:toast.group>
         @endpersist
 
+        @include('partials.keyboard')
+
         @fluxScripts
     </body>
 </html>

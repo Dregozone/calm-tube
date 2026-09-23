@@ -260,6 +260,20 @@ server-rendered `hidden` and the countdown runs invisibly to its end. That is no
 - "Replay" calls `player.seekTo(0)` and hides the overlay.
 - Marking watched happens via `$wire.markWatched()`, so a page reload shows the new state.
 
+### The end-card mask
+
+YouTube draws clickable end cards over the last seconds of a video, inside the iframe, where
+no embed parameter reaches them. For that stretch a transparent layer covers the picture and
+swallows the clicks.
+
+It stops short of the control bar, so the scrubber and volume stay reachable, and a click on
+it pauses rather than doing nothing — pausing is what clicking a video is for, and the mask
+should not take that away. Paused, it lifts: the picture is then yours to look at.
+
+Remaining time is polled once a second rather than scheduled, because it moves with both
+seeking and playback speed. `calm-tube.player.end_card_mask_seconds` sets the window, and 0
+turns it off. It does not apply in fullscreen, where the iframe is on top of everything.
+
 ### The countdown
 
 ```
@@ -528,6 +542,13 @@ Tailwind v4 and Flux Free only, staying with the starter kit's existing look.
 
 ## Keyboard
 
-Phase 9, and kept minimal: `/` focuses the feed filter, `g f` → feed, `g c` → channels,
-`Esc` closes any modal (Flux default). No j/k card-by-card navigation — that's a
-scrolling-speed feature, and speed isn't the goal.
+Kept minimal: `g f` → feed, `g c` → channels, `/` focuses whatever this page's one text
+control is (the channel filter on the feed, the add form on the channels page), and `Esc`
+closes any modal (Flux default). No j/k card-by-card navigation — that's a scrolling-speed
+feature, and speed isn't the goal.
+
+The handler lives in `partials/keyboard.blade.php`, included by the layout and bound to the
+document, which survives `wire:navigate`; a `window` flag stops a second visit stacking
+another set of listeners. `g` waits 1.5 seconds for its destination and then forgets it, so a
+stray press cannot hijack whatever you type a minute later. Every shortcut is ignored while
+the focus is in a field.

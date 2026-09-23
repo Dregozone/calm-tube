@@ -39,3 +39,11 @@ Schedule::command('calm:enrich')
 Schedule::command('calm:archive')
     ->dailyAt('04:30')
     ->withoutOverlapping();
+
+/*
+ * The only scheduled deletion in the app, and it touches nothing you archived:
+ * refresh runs are a record of what the app did, not of what you follow.
+ */
+Schedule::command('calm:prune-runs')
+    ->weeklyOn(1, '05:00')
+    ->withoutOverlapping();

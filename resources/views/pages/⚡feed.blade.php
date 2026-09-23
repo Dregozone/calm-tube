@@ -127,7 +127,7 @@ new #[Title('Feed')] class extends Component
     <div class="flex flex-wrap items-start justify-between gap-4">
         <flux:heading size="xl" level="1">{{ __('Feed') }}</flux:heading>
 
-        <div class="flex items-center gap-3">
+        <div class="flex flex-wrap items-center gap-3">
             @if ($lastRefreshedAt)
                 <flux:text size="sm" wire:loading.remove wire:target="refreshAll">
                     {{ __('Last refreshed') }} {{ \Illuminate\Support\Carbon::parse($lastRefreshedAt)->diffForHumans() }}
@@ -169,7 +169,7 @@ new #[Title('Feed')] class extends Component
                 <flux:radio value="unwatched">{{ __('Unwatched') }}</flux:radio>
             </flux:radio.group>
 
-            <flux:select wire:model.live="channel" size="sm" class="max-w-64">
+            <flux:select wire:model.live="channel" size="sm" class="max-w-64" data-calm-focus>
                 <flux:select.option value="">{{ __('All channels') }}</flux:select.option>
 
                 @foreach ($channels as $option)

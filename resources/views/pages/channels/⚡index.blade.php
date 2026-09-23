@@ -265,6 +265,7 @@ new #[Title('Channels')] class extends Component
                 wire:model="input"
                 placeholder="{{ __('@handle, channel URL, or channel ID') }}"
                 class="flex-1"
+                data-calm-focus
             />
 
             <flux:button type="submit" variant="primary" class="data-loading:opacity-50">
@@ -293,7 +294,7 @@ new #[Title('Channels')] class extends Component
 
         <ul class="mt-3 divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
             @foreach ($channels as $channel)
-                <li class="flex items-center gap-4 p-4 {{ $channel->is_enabled ? '' : 'opacity-60' }}" wire:key="channel-{{ $channel->id }}">
+                <li class="flex items-center gap-3 p-4 sm:gap-4 {{ $channel->is_enabled ? '' : 'opacity-60' }}" wire:key="channel-{{ $channel->id }}">
                     <img
                         src="{{ route('avatars.show', $channel) }}"
                         alt=""
@@ -336,7 +337,7 @@ new #[Title('Channels')] class extends Component
                         size="sm"
                         class="data-loading:opacity-50"
                     >
-                        {{ __('Refresh') }}
+                        <span class="hidden sm:inline">{{ __('Refresh') }}</span>
                     </flux:button>
 
                     <flux:dropdown position="bottom" align="end">

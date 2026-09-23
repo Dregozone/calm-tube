@@ -166,6 +166,7 @@ new #[Title('Watch')] class extends Component
                 data-return-url="{{ $this->returnUrl() }}"
                 data-playback-rate="{{ $this->video->channel->effective_playback_rate }}"
                 data-countdown-seconds="{{ config('calm-tube.player.countdown_seconds') }}"
+                data-mask-seconds="{{ config('calm-tube.player.end_card_mask_seconds') }}"
             >
                 <iframe
                     id="calm-player"
@@ -176,6 +177,17 @@ new #[Title('Watch')] class extends Component
                     allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen
                 ></iframe>
+
+                {{-- Transparent, and only for the last seconds of the video:
+                     it covers the end cards YouTube draws over the picture,
+                     which no embed parameter can turn off. The control bar is
+                     left exposed, and a click pauses rather than doing
+                     nothing, so the one useful click on a video survives. --}}
+                <div
+                    id="calm-mask"
+                    class="absolute inset-x-0 bottom-14 top-0 z-5 hidden cursor-pointer"
+                    aria-hidden="true"
+                ></div>
 
                 {{-- In the DOM from the start: built when the video ends, it
                      would appear a beat after YouTube's own end screen. --}}
@@ -363,9 +375,12 @@ new #[Title('Watch')] class extends Component
         const reveal = (panel) => panel?.classList.replace('hidden', 'flex');
         const conceal = (panel) => panel?.classList.replace('flex', 'hidden');
 
+        const mask = document.getElementById('calm-mask');
         const returnUrl = stage.dataset.returnUrl;
         const total = Number(stage.dataset.countdownSeconds || 5);
+        const maskFrom = Number(stage.dataset.maskSeconds || 0);
         let rate = Number(stage.dataset.playbackRate || 1);
+        let watching = null;
 
         let countdown = null;
 
@@ -420,6 +435,29 @@ new #[Title('Watch')] class extends Component
         });
 
         const boot = () => {
+            // Polled rather than scheduled: the remaining time moves with
+            // seeking and with playback speed, and one check a second is
+            // cheaper than getting either of those wrong.
+            const watchForEndCards = () => {
+                clearInterval(watching);
+
+                if (maskFrom <= 0) {
+                    return;
+                }
+
+                watching = setInterval(() => {
+                    const left = player.getDuration() - player.getCurrentTime();
+
+                    left > 0 && left <= maskFrom ? reveal(mask) : conceal(mask);
+                }, 1000);
+            };
+
+            const stopWatching = () => {
+                clearInterval(watching);
+                watching = null;
+                conceal(mask);
+            };
+
             const applyRate = () => {
                 if (rate !== 1) {
                     player.setPlaybackRate(rate);
@@ -433,9 +471,16 @@ new #[Title('Watch')] class extends Component
                         if (event.data === YT.PlayerState.PLAYING) {
                             conceal(ended);
                             stopCountdown();
+                            watchForEndCards();
                             // YouTube resets the rate when a video actually
                             // starts, so asking once on ready is not enough.
                             applyRate();
+                        }
+
+                        if (event.data === YT.PlayerState.PAUSED) {
+                            // Paused inside the masked stretch, the picture
+                            // should be yours to look at.
+                            stopWatching();
                         }
 
                         if (event.data === YT.PlayerState.ENDED) {
@@ -444,6 +489,7 @@ new #[Title('Watch')] class extends Component
                                 document.exitFullscreen?.();
                             }
 
+                            stopWatching();
                             reveal(ended);
                             $wire.markWatched();
                             startCountdown();
@@ -457,6 +503,7 @@ new #[Title('Watch')] class extends Component
                         }
 
                         stopCountdown();
+                        stopWatching();
                         reveal(errored);
                     },
                 },
@@ -468,6 +515,10 @@ new #[Title('Watch')] class extends Component
                 rate = Number(event.rate ?? 1);
                 player.setPlaybackRate(rate);
             });
+
+            // Clicking the picture is how you pause a video; the mask must
+            // not take that away, only the end cards underneath it.
+            mask?.addEventListener('click', () => player.pauseVideo());
 
             document.getElementById('calm-replay')?.addEventListener('click', () => {
                 stopCountdown();

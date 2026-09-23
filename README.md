@@ -1,0 +1,121 @@
+# Calm Tube
+
+A personal app for following a hand-picked set of YouTube channels without ever visiting
+youtube.com's homepage, recommendations or sidebar.
+
+One reverse-chronological list of what the channels you chose have published. No algorithm,
+no autoplay, no "up next", no Shorts. Single user, runs locally under Herd, never deployed.
+
+Three rules the app is built around, and none of them bend:
+
+1. **Archived metadata is immutable.** A title or thumbnail changed on YouTube after you first
+   saw the video never changes here.
+2. **Shorts never appear.** Not filtered by default — excluded, with no toggle to show them.
+3. **Nothing suggests another video.** The one exception is a single explicit "next unwatched
+   from this channel" button at the end of a video, which you click or you don't.
+
+The full design lives in [docs/](docs/), starting with
+[the project brief](docs/00-project-brief.md).
+
+---
+
+## Running it
+
+```bash
+composer run dev
+```
+
+That is `php artisan dev`, which runs the server and Vite together. Under Herd the app is
+already served at `http://calm-tube.test`, so `npm run dev` on its own is usually enough.
+
+Refreshes are **synchronous** — there is no queue worker to keep alive. The "Refresh all"
+button in the UI always works.
+
+For unattended hourly refreshes, run the scheduler in a second terminal:
+
+```bash
+php artisan schedule:work
+```
+
+Without it, nothing refreshes on its own; the buttons in the UI are the path that always works.
+
+---
+
+## Setup
+
+```bash
+composer setup
+```
+
+That installs both sets of dependencies, writes `.env`, generates a key, migrates and builds.
+
+Register an account at `/register`, then add channels at `/channels`. Registration stays open
+so the account can be recreated after a `migrate:fresh`.
+
+### The YouTube API key
+
+Add one to `.env`:
+
+```
+YOUTUBE_API_KEY=
+```
+
+The app boots and runs without it, but a lot is unavailable:
+
+| Without a key | With a key |
+| --- | --- |
+| Durations are blank | Durations, live status and Shorts detection work |
+| A pasted `@handle` can't be resolved — only a raw `UC…` channel ID | Any handle, URL or video link resolves |
+| **Discovery fails entirely while YouTube's RSS feed is down** | Refreshes fall back to the uploads playlist |
+
+That last row matters right now: YouTube's `/feeds/videos.xml` has been answering 404
+intermittently since late 2025, so refreshes are currently running on the uploads playlist,
+which costs one quota unit per channel. Roughly 600 units a day at hourly refreshes, against
+a 10,000 unit allowance.
+
+---
+
+## Commands
+
+| Command | What it does |
+| --- | --- |
+| `php artisan calm:refresh` | Fetch new uploads from every enabled channel |
+| `php artisan calm:backfill` | Recover older uploads the RSS window can no longer reach |
+| `php artisan calm:enrich` | Fill in durations and live status for videos still missing them |
+| `php artisan calm:archive` | Download thumbnails and avatars not yet stored locally |
+| `php artisan calm:prune-runs` | Trim refresh history older than 30 days |
+
+`calm:prune-runs` is the only thing in the app that deletes on a schedule, and it only touches
+operational history. Videos and channels are kept forever.
+
+Scheduled: refresh hourly, enrich at 04:00, archive at 04:30, prune Mondays at 05:00.
+
+---
+
+## Keyboard
+
+| Key | Does |
+| --- | --- |
+| `g` then `f` | Feed |
+| `g` then `c` | Channels |
+| `/` | Focus this page's one text control — the channel filter, or the add form |
+| `Esc` | Close a modal |
+
+There is deliberately no `j`/`k` card-by-card navigation. That is a scrolling-speed feature,
+and speed is not the goal.
+
+---
+
+## Development
+
+```bash
+php artisan test --compact
+composer quality
+```
+
+`composer quality` runs Rector, Pint and PHPStan at level 7. Both should be clean before a
+commit.
+
+The test suite blocks the network (`Http::preventStrayRequests()`), so a forgotten fake fails
+loudly instead of reaching YouTube. Fixtures live in `tests/Fixtures/youtube/`, with one fake
+helper per endpoint.

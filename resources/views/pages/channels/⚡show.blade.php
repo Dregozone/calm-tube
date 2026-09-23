@@ -150,7 +150,7 @@ new class extends Component
                 wire:loading.attr="disabled"
                 class="data-loading:opacity-50"
             >
-                {{ __('Refresh') }}
+                <span class="hidden sm:inline">{{ __('Refresh') }}</span>
             </flux:button>
 
             <a

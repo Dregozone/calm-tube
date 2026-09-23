@@ -364,3 +364,35 @@ describe('playback speed', function (): void {
             ->assertDispatched('playback-rate-changed', rate: 1.25);
     });
 });
+
+describe('the end-card mask', function (): void {
+    it('covers the picture for the last seconds, where YouTube draws its end cards', function (): void {
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('id="calm-mask"', escape: false)
+            ->assertSee('data-mask-seconds="20"', escape: false)
+            ->assertSee('watchForEndCards', escape: false);
+    });
+
+    it('leaves the control bar exposed', function (): void {
+        $video = watchable();
+
+        // bottom-14 stops the mask short of YouTube's own controls, so the
+        // scrubber and volume stay reachable through it.
+        $this->get(route('videos.watch', $video))->assertSee('bottom-14', escape: false);
+    });
+
+    it('pauses when clicked, rather than swallowing the one useful click', function (): void {
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))->assertSee('pauseVideo', escape: false);
+    });
+
+    it('can be turned off entirely', function (): void {
+        config()->set('calm-tube.player.end_card_mask_seconds', 0);
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))->assertSee('data-mask-seconds="0"', escape: false);
+    });
+});

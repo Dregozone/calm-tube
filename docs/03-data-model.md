@@ -147,7 +147,8 @@ reading logs.
 API error. It is the state that tells you durations are missing but nothing is lost.
 
 **Growth:** hourly scheduled refreshes over 30 channels is ~260k rows/year, which is more
-history than is useful. A `calm:prune-runs` command (Phase 10) trims runs older than 30 days.
+history than is useful. A `calm:prune-runs` command trims runs older than
+`calm-tube.refresh.keep_runs_for_days` (30), scheduled Mondays at 05:00.
 This is the one thing that *is* pruned — it's operational log data, not your archive.
 
 ## Relationships
