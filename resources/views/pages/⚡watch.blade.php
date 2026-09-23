@@ -129,9 +129,23 @@ new #[Title('Watch')] class extends Component
             'playsinline' => 1,
             'iv_load_policy' => 3,
             'enablejsapi' => 1,
-            'autoplay' => 0,
+            'autoplay' => $this->shouldAutoplay() ? 1 : 0,
             'origin' => config('app.url'),
         ]);
+    }
+
+    /**
+     * You chose this video, so it plays.
+     *
+     * Not the autoplay this app exists to avoid: that one chooses the next
+     * video for you. A part-watched video is the exception, because the
+     * resume prompt has a question to ask before anything starts.
+     */
+    public function shouldAutoplay(): bool
+    {
+        return (bool) config('calm-tube.player.autoplay')
+            && ! $this->video->isResumable()
+            && ! $this->video->isUnavailable();
     }
 
     /**
@@ -195,6 +209,7 @@ new #[Title('Watch')] class extends Component
                 data-countdown-seconds="{{ config('calm-tube.player.countdown_seconds') }}"
                 data-mask-seconds="{{ config('calm-tube.player.end_card_mask_seconds') }}"
                 data-resume-seconds="{{ $this->video->isResumable() ? $this->video->resume_seconds : 0 }}"
+                data-autoplay="{{ $this->shouldAutoplay() ? 1 : 0 }}"
             >
                 <iframe
                     id="calm-player"
@@ -439,6 +454,7 @@ new #[Title('Watch')] class extends Component
         const maskFrom = Number(stage.dataset.maskSeconds || 0);
         const resumeAt = Number(stage.dataset.resumeSeconds || 0);
         const resumePanel = document.getElementById('calm-resume');
+        const autoplay = stage.dataset.autoplay === '1';
         let rate = Number(stage.dataset.playbackRate || 1);
         let watching = null;
         let recording = null;
@@ -544,9 +560,21 @@ new #[Title('Watch')] class extends Component
                 }
             };
 
+            // The embed parameter asks; this asks again, because a browser
+            // that blocked the first attempt may allow one made from a page
+            // the viewer has already clicked on. If it refuses, the poster
+            // stays up and the play button is where it always was.
+            const start = () => {
+                applyRate();
+
+                if (autoplay) {
+                    player.playVideo();
+                }
+            };
+
             const player = new YT.Player(frame, {
                 events: {
-                    onReady: applyRate,
+                    onReady: start,
                     onStateChange(event) {
                         if (event.data === YT.PlayerState.PLAYING) {
                             conceal(ended);

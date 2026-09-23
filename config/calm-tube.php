@@ -40,6 +40,11 @@ return [
         // Refresh history is operational log data, not part of the archive,
         // and it is the only thing this app ever deletes on a schedule.
         'keep_runs_for_days' => 30,
+
+        // Opening a feed nobody has refreshed for this long refreshes it,
+        // after the page has rendered, so the app stays current without a
+        // scheduler running in the background. 0 turns it off.
+        'auto_after_hours' => env('CALM_TUBE_AUTO_REFRESH_HOURS', 6),
     ],
 
     /*
@@ -102,6 +107,12 @@ return [
     'player' => [
         'playback_rates' => [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0],
         'countdown_seconds' => 5,
+
+        // You clicked the video, so it plays. This is not the autoplay the
+        // app exists to avoid: that one picks the next video for you, and
+        // nothing here ever will. A part-watched video never autoplays,
+        // because it has a question to ask you first.
+        'autoplay' => env('CALM_TUBE_AUTOPLAY', true),
 
         // YouTube draws clickable end cards over the last seconds of a video,
         // inside the iframe where no embed parameter can remove them. For that

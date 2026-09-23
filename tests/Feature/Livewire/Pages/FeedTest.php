@@ -375,3 +375,115 @@ describe('sampled channels in the feed', function (): void {
         Livewire::test('pages::feed')->assertDontSee('Sampling set aside');
     });
 });
+
+describe('refreshing a feed nobody has looked at', function (): void {
+    it('asks the page to refresh itself when the library has gone stale', function (): void {
+        calmChannel(['last_refreshed_at' => now()->subHours(9)]);
+
+        // wire:init, so the grid is on screen before any of it starts.
+        Livewire::test('pages::feed')->assertSee('wire:init="autoRefresh"', escape: false);
+    });
+
+    it('does not when it was refreshed recently', function (): void {
+        calmChannel(['last_refreshed_at' => now()->subMinutes(20)]);
+
+        Livewire::test('pages::feed')->assertDontSee('wire:init="autoRefresh"', escape: false);
+    });
+
+    it('treats a channel that has never been refreshed as stale', function (): void {
+        Channel::factory()->neverRefreshed()->create();
+
+        Livewire::test('pages::feed')->assertSee('wire:init="autoRefresh"', escape: false);
+    });
+
+    it('stays quiet when following nothing', function (): void {
+        Livewire::test('pages::feed')->assertDontSee('wire:init="autoRefresh"', escape: false);
+    });
+
+    it('can be turned off', function (): void {
+        config()->set('calm-tube.refresh.auto_after_hours', 0);
+        calmChannel(['last_refreshed_at' => now()->subDays(5)]);
+
+        Livewire::test('pages::feed')->assertDontSee('wire:init="autoRefresh"', escape: false);
+    });
+
+    it('refreshes every enabled channel when it runs', function (): void {
+        Bus::fake([RefreshChannel::class]);
+        calmChannel(['last_refreshed_at' => now()->subHours(9)]);
+        Channel::factory()->create(['last_refreshed_at' => now()->subHours(9)]);
+        Channel::factory()->disabled()->create(['last_refreshed_at' => now()->subHours(9)]);
+
+        Livewire::test('pages::feed')->call('autoRefresh');
+
+        Bus::assertDispatchedSyncTimes(RefreshChannel::class, 2);
+    });
+
+    it('does nothing at all when the feed is fresh', function (): void {
+        Bus::fake([RefreshChannel::class]);
+        calmChannel(['last_refreshed_at' => now()->subMinutes(5)]);
+
+        Livewire::test('pages::feed')->call('autoRefresh');
+
+        Bus::assertNotDispatchedSync(RefreshChannel::class);
+    });
+});
+
+describe('videos that arrive while you are reading', function (): void {
+    it('announces them rather than sliding them into the grid', function (): void {
+        $channel = calmChannel(['last_refreshed_at' => now()->subHours(9)]);
+        $alreadyHere = Video::factory()->for($channel)->create();
+
+        $component = Livewire::test('pages::feed');
+
+        // Stand in for what a refresh would have created.
+        $this->travelTo(now()->addMinute());
+        $arrived = Video::factory()->for($channel)->create();
+
+        $component->set('heldBackSince', now()->subSeconds(30)->toDateTimeString())
+            ->set('heldBackCount', 1)
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$alreadyHere->id])
+            ->assertSee('arrived while you were away')
+            ->assertSee('Show them');
+
+        expect($arrived->exists)->toBeTrue();
+    });
+
+    it('shows them the moment you ask', function (): void {
+        $channel = calmChannel();
+        $alreadyHere = Video::factory()->for($channel)->create();
+        $this->travelTo(now()->addMinute());
+        $arrived = Video::factory()->for($channel)->create();
+
+        Livewire::test('pages::feed')
+            ->set('heldBackSince', now()->subSeconds(30)->toDateTimeString())
+            ->set('heldBackCount', 1)
+            ->call('showNew')
+            ->assertViewHas('videos', fn ($videos): bool => $videos->contains($arrived))
+            ->assertSet('heldBackSince', null);
+
+        expect($alreadyHere->exists)->toBeTrue();
+    });
+
+    it('holds nothing back when you pressed refresh yourself', function (): void {
+        Bus::fake([RefreshChannel::class]);
+        calmChannel();
+
+        // You asked, so you want to see the result, not a button about it.
+        Livewire::test('pages::feed')
+            ->set('heldBackSince', now()->toDateTimeString())
+            ->call('refreshAll')
+            ->assertSet('heldBackSince', null)
+            ->assertSet('heldBackCount', 0);
+    });
+
+    it('says nothing when a refresh found nothing', function (): void {
+        Storage::fake('local');
+        fakeFeed('feed-empty.xml');
+        calmChannel(['last_refreshed_at' => now()->subHours(9)]);
+
+        Livewire::test('pages::feed')
+            ->call('autoRefresh')
+            ->assertSet('heldBackCount', 0)
+            ->assertDontSee('arrived while you were away');
+    });
+});

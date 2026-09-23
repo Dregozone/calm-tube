@@ -1,11 +1,13 @@
 <?php
 
+use App\Enums\RefreshTrigger;
 use App\Jobs\RefreshChannel;
 use App\Models\Channel;
 use App\Models\Video;
 use App\Support\RefreshResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Date;
 use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -28,6 +30,15 @@ new #[Title('Feed')] class extends Component
 
     /** Video ids the last bulk action touched, so it can be undone. */
     public array $undoable = [];
+
+    /**
+     * Set when a refresh you did not ask for found something. Videos created
+     * after this moment wait behind a button rather than appearing under your
+     * cursor and shifting everything down a row.
+     */
+    public ?string $heldBackSince = null;
+
+    public int $heldBackCount = 0;
 
     /**
      * Opened without filters in the URL, the feed picks up where you left off.
@@ -124,9 +135,76 @@ new #[Title('Feed')] class extends Component
         $this->resetPage();
     }
 
+    /**
+     * Refreshes a feed nobody has looked at for a while, once the page has
+     * already rendered.
+     *
+     * This is why the app needs no scheduler and no queue worker: opening it
+     * is the trigger. Run through wire:init so the grid is on screen and
+     * usable before any of it starts.
+     */
+    public function autoRefresh(): void
+    {
+        $channels = Channel::query()->enabled()->get();
+
+        if (! $this->isStale($channels)) {
+            return;
+        }
+
+        $since = now();
+        $new = 0;
+
+        foreach ($channels as $channel) {
+            $result = RefreshChannel::dispatchSync($channel, RefreshTrigger::Stale);
+
+            if ($result instanceof RefreshResult && ! $result->isFailed()) {
+                $new += $result->newVideos;
+            }
+        }
+
+        if ($new === 0) {
+            return;
+        }
+
+        // Announced, not inserted. Arriving somewhere new is always your
+        // click, and a grid that reshuffles while you are reading it is the
+        // feed behaviour this app exists to avoid.
+        $this->heldBackSince = $since->toDateTimeString();
+        $this->heldBackCount = $new;
+    }
+
+    public function showNew(): void
+    {
+        $this->heldBackSince = null;
+        $this->heldBackCount = 0;
+        $this->resetPage();
+    }
+
+    /**
+     * Nothing has been refreshed for longer than the configured window.
+     *
+     * A channel that has never been refreshed counts as stale, which is what
+     * a freshly added one wants.
+     *
+     * @param  Collection<int, Channel>  $channels
+     */
+    private function isStale(Collection $channels): bool
+    {
+        $hours = (int) config('calm-tube.refresh.auto_after_hours');
+
+        if ($hours <= 0 || $channels->isEmpty()) {
+            return false;
+        }
+
+        $last = $channels->max('last_refreshed_at');
+
+        return $last === null || Date::parse($last)->lt(now()->subHours($hours));
+    }
+
     public function refreshAll(): void
     {
         $this->undoable = [];
+        $this->showNew();
         $channels = Channel::query()->enabled()->get();
         $new = 0;
         $failed = 0;
@@ -159,9 +237,11 @@ new #[Title('Feed')] class extends Component
      */
     public function with(): array
     {
+        $channels = Channel::query()->enabled()->orderBy('title')->get();
+
         return [
             'videos' => $this->videos(),
-            'channels' => Channel::query()->enabled()->orderBy('title')->get(),
+            'channels' => $channels,
             'followsNothing' => Channel::query()->count() === 0,
             // "All caught up" is only true if there was anything to catch up
             // on. An empty library needs a refresh, not congratulations.
@@ -172,8 +252,9 @@ new #[Title('Feed')] class extends Component
                 ->withCount(['videos as set_aside_count' => fn ($query) => $query->setAside()])
                 ->orderBy('title')
                 ->get(),
-            'lastRefreshedAt' => Channel::query()->max('last_refreshed_at'),
+            'lastRefreshedAt' => $channels->max('last_refreshed_at'),
             'missingApiKey' => config('calm-tube.api_key') === null,
+            'stale' => $this->heldBackSince === null && $this->isStale($channels),
         ];
     }
 
@@ -189,12 +270,13 @@ new #[Title('Feed')] class extends Component
             ->when($this->channel !== '', fn ($query) => $query->whereRelation(
                 'channel', 'youtube_channel_id', $this->channel
             ))
+            ->when($this->heldBackSince, fn ($query) => $query->where('created_at', '<=', $this->heldBackSince))
             ->orderByDesc('published_at')
             ->paginate((int) config('calm-tube.feed.per_page'));
     }
 }; ?>
 
-<section class="mx-auto w-full max-w-7xl px-4 py-8">
+<section class="mx-auto w-full max-w-7xl px-4 py-8" @if ($stale) wire:init="autoRefresh" @endif>
     <div class="flex flex-wrap items-start justify-between gap-4">
         <flux:heading size="xl" level="1">{{ __('Feed') }}</flux:heading>
 
@@ -207,6 +289,10 @@ new #[Title('Feed')] class extends Component
 
             <flux:text size="sm" wire:loading wire:target="refreshAll">
                 {{ __('Refreshing') }}…
+            </flux:text>
+
+            <flux:text size="sm" wire:loading wire:target="autoRefresh">
+                {{ __('Checking for new videos') }}…
             </flux:text>
 
             @unless ($followsNothing)
@@ -233,6 +319,22 @@ new #[Title('Feed')] class extends Component
                         {{ __('Undo') }}
                     </flux:button>
                 @endif
+            </div>
+        </flux:callout>
+    @endif
+
+    @if ($heldBackCount > 0)
+        <flux:callout variant="secondary" class="mt-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <span>
+                    {{ $heldBackCount }}
+                    {{ $heldBackCount === 1 ? __('new video') : __('new videos') }}
+                    {{ __('arrived while you were away.') }}
+                </span>
+
+                <flux:button wire:click="showNew" size="xs" variant="primary">
+                    {{ __('Show them') }}
+                </flux:button>
             </div>
         </flux:callout>
     @endif

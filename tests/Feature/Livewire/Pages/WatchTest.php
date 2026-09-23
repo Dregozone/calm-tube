@@ -55,19 +55,58 @@ describe('the embedded player', function (): void {
     })->with([
         'no related videos' => ['rel=0'],
         'no annotations' => ['iv_load_policy=3'],
-        'no autoplay' => ['autoplay=0'],
         'the JS API, for detecting the end of the video' => ['enablejsapi=1'],
     ]);
 
-    it('never asks the player to autoplay or loop', function (string $parameter): void {
+    it('never loops', function (): void {
         $video = watchable();
 
         Livewire::test('pages::watch', ['video' => $video])
-            ->assertDontSee($parameter, escape: false);
-    })->with([
-        'autoplay' => ['autoplay=1'],
-        'loop' => ['loop=1'],
-    ]);
+            ->assertDontSee('loop=1', escape: false);
+    });
+});
+
+describe('starting the video', function (): void {
+    it('plays the video you chose without a second click', function (): void {
+        $video = watchable();
+
+        // Not the autoplay this app exists to avoid: that one chooses the
+        // next video for you, and nothing here ever will.
+        Livewire::test('pages::watch', ['video' => $video])
+            ->assertSee('autoplay=1', escape: false)
+            ->assertSee('data-autoplay="1"', escape: false);
+    });
+
+    it('waits when there is a resume prompt to answer first', function (): void {
+        $video = watchable(['resume_seconds' => 1122, 'duration_seconds' => 2400]);
+
+        Livewire::test('pages::watch', ['video' => $video])
+            ->assertSee('autoplay=0', escape: false)
+            ->assertSee('data-autoplay="0"', escape: false);
+    });
+
+    it('has nothing to start when YouTube no longer has the video', function (): void {
+        $video = watchable(['unavailable_at' => now()]);
+
+        // No player is rendered at all, so there is no parameter to set.
+        Livewire::test('pages::watch', ['video' => $video])
+            ->assertDontSee('id="calm-player"', escape: false)
+            ->assertSee('no longer available');
+    });
+
+    it('can be turned off', function (): void {
+        config()->set('calm-tube.player.autoplay', false);
+        $video = watchable();
+
+        Livewire::test('pages::watch', ['video' => $video])
+            ->assertSee('autoplay=0', escape: false);
+    });
+
+    it('asks the player again once it is ready, in case the browser refused', function (): void {
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))->assertSee('playVideo', escape: false);
+    });
 });
 
 it('links to the original video on YouTube in a new tab', function (): void {

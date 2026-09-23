@@ -28,16 +28,24 @@ composer run dev
 That is `php artisan dev`, which runs the server and Vite together. Under Herd the app is
 already served at `http://calm-tube.test`, so `npm run dev` on its own is usually enough.
 
-Refreshes are **synchronous** — there is no queue worker to keep alive. The "Refresh all"
-button in the UI always works.
+**Nothing needs to be running in the background.** There is no queue worker and no cron to
+remember:
 
-For unattended hourly refreshes, run the scheduler in a second terminal:
+- Refreshes are **synchronous**. `RefreshChannel` is not a `ShouldQueue`, so the `jobs` table is
+  never written to and there is nothing to drain.
+- Opening a feed that has not been refreshed for **6 hours refreshes it by itself**, after the
+  page has rendered. What it finds is announced — *"12 new videos arrived while you were away"* —
+  rather than slid into the grid you are reading.
+- The **Refresh all** button always works, and holds nothing back.
+
+The only thing you lose without a scheduler is refreshing while the app is closed, and the
+nightly housekeeping. If you want those, run it in a second terminal:
 
 ```bash
 php artisan schedule:work
 ```
 
-Without it, nothing refreshes on its own; the buttons in the UI are the path that always works.
+`CALM_TUBE_AUTO_REFRESH_HOURS=0` turns the automatic refresh off.
 
 ---
 

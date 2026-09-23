@@ -262,6 +262,16 @@ server-rendered `hidden` and the countdown runs invisibly to its end. That is no
 - "Replay" calls `player.seekTo(0)` and hides the overlay.
 - Marking watched happens via `$wire.markWatched()`, so a page reload shows the new state.
 
+### Starting
+
+The video you clicked plays without a second click: `autoplay=1`, plus a `playVideo()` on
+ready in case the browser refused the first attempt. If it refuses both, the poster stays and
+the play button is where it always was.
+
+This is not the autoplay the app exists to avoid. That one chooses the *next* video for you,
+and nothing here ever will. A part-watched video is the exception — it has a resume prompt to
+put to you first, so it waits. `calm-tube.player.autoplay` turns it off.
+
 ### Resuming
 
 The embedded player forgets where you were between visits, so the position is written to
@@ -469,6 +479,29 @@ marked as watched, both emphasised in the sentence so the size of the loss is im
 skim past. **Disable instead** is offered on the same row, and is absent when the channel is
 already disabled. `[ Delete permanently ]` is the danger variant and is the only control in
 the app that isn't reversible.
+
+---
+
+## Keeping the feed current without a scheduler
+
+Nothing in this app is queued. `RefreshChannel` is not a `ShouldQueue` and is always
+`dispatchSync()`d, so there is no worker to keep alive and the `jobs` table is never written
+to. The manual refresh buttons always work.
+
+The scheduler (`php artisan schedule:work`) is therefore optional, and on a local machine it
+is usually not running. So opening a feed nobody has refreshed for
+`calm-tube.refresh.auto_after_hours` refreshes it — through `wire:init`, **after** the grid has
+rendered, so the page is on screen and usable while it runs. Opening the app is the trigger,
+which is the one event a local app can rely on.
+
+**What it finds is announced, not inserted.** Videos created after the page opened are held
+behind a "12 new videos arrived while you were away — Show them" line, and only appear when you
+ask. A grid that reshuffles under your cursor while you are reading it is precisely the feed
+behaviour this app exists to avoid: leaving is automatic, arriving somewhere new is always your
+click. Pressing **Refresh all** yourself holds nothing back — you asked, so you see the result.
+
+Its refresh runs are recorded with the `stale` trigger, so the history says which refreshes
+nobody asked for. Set the window to 0 to turn it off.
 
 ---
 
