@@ -1,8 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 42" {{ $attributes }}>
-    <path 
-        fill="currentColor" 
-        fill-rule="evenodd" 
-        clip-rule="evenodd"
-        d="M17.2 5.633 8.6.855 0 5.633v26.51l16.2 9 16.2-9v-8.442l7.6-4.223V9.856l-8.6-4.777-8.6 4.777V18.3l-5.6 3.111V5.633ZM38 18.301l-5.6 3.11v-6.157l5.6-3.11V18.3Zm-1.06-7.856-5.54 3.078-5.54-3.079 5.54-3.078 5.54 3.079ZM24.8 18.3v-6.157l5.6 3.111v6.158L24.8 18.3Zm-1 1.732 5.54 3.078-13.14 7.302-5.54-3.078 13.14-7.3v-.002Zm-16.2 7.89 7.6 4.222V38.3L2 30.966V7.92l5.6 3.111v16.892ZM8.6 9.3 3.06 6.222 8.6 3.143l5.54 3.08L8.6 9.3Zm21.8 15.51-13.2 7.334V38.3l13.2-7.334v-6.156ZM9.6 11.034l5.6-3.11v14.6l-5.6 3.11v-14.6Z"
-    />
+{{-- A play mark resting above a still horizon: video, without the noise.
+     Carries its own colours, so it reads the same in light and dark. --}}
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" {{ $attributes }}>
+    <defs>
+        <linearGradient id="calm-tube-logo-bg" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#2dd4bf" />
+            <stop offset="1" stop-color="#0e7490" />
+        </linearGradient>
+    </defs>
+    <rect width="64" height="64" rx="15" fill="url(#calm-tube-logo-bg)" />
+    <path d="M25 18.5v21l17-10.5z" fill="#fff" stroke="#fff" stroke-width="6" stroke-linejoin="round" />
+    <path d="M17 50h30" stroke="#fff" stroke-opacity=".6" stroke-width="3.5" stroke-linecap="round" />
 </svg>

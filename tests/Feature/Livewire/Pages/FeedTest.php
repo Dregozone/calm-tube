@@ -57,6 +57,18 @@ describe('pagination', function (): void {
             ->assertViewHas('videos', fn ($videos): bool => $videos->count() === 6);
     });
 
+    it('hides the pager when everything fits on one page', function (): void {
+        Video::factory()->for(calmChannel())->count(3)->create();
+
+        Livewire::test('pages::feed')->assertDontSee('nextPage', escape: false);
+    });
+
+    it('offers the pager when there is more than one page', function (): void {
+        Video::factory()->for(calmChannel())->count(30)->create();
+
+        Livewire::test('pages::feed')->assertSee('nextPage', escape: false);
+    });
+
     it('uses the configured page size', function (): void {
         config()->set('calm-tube.feed.per_page', 5);
         Video::factory()->for(calmChannel())->count(8)->create();

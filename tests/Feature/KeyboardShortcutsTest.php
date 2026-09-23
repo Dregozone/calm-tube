@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Channel;
+use App\Models\Video;
 
 beforeEach(function (): void {
     $this->actingAs(calmUser());
@@ -41,4 +42,17 @@ it('gives the channel list a focus target for the slash key', function (): void 
 
 it('does not offer card-by-card navigation, which is a speed feature', function (): void {
     $this->get(route('feed'))->assertDontSee('ArrowDown', escape: false);
+});
+
+it('lists the shortcuts when asked', function (): void {
+    $this->get(route('feed'))
+        ->assertSee('calm-shortcuts', escape: false)
+        ->assertSee('Keyboard shortcuts')
+        ->assertDontSee('Forward 10 seconds');
+});
+
+it('lists the player keys on the watch page', function (): void {
+    $video = Video::factory()->for(calmChannel())->create();
+
+    $this->get(route('videos.watch', $video))->assertSee('Forward 10 seconds');
 });

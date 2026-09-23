@@ -28,6 +28,7 @@ class ChannelFactory extends Factory
             'uploads_playlist_id' => 'UU'.Str::random(22),
             'is_enabled' => true,
             'playback_rate' => null,
+            'outro_seconds' => null,
             'sample_limit' => null,
             'feed_etag' => null,
             'feed_last_modified' => null,
@@ -69,6 +70,14 @@ class ChannelFactory extends Factory
     public function atSpeed(float $rate): static
     {
         return $this->state(fn (): array => ['playback_rate' => $rate]);
+    }
+
+    /**
+     * Every video on this channel ends with a plug this many seconds long.
+     */
+    public function withOutro(int $seconds = 15): static
+    {
+        return $this->state(fn (): array => ['outro_seconds' => $seconds]);
     }
 
     /**

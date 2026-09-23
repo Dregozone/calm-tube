@@ -121,6 +121,24 @@ it('redirects a guest to the login page', function (): void {
     $this->get(route('channels.show', $channel))->assertRedirect(route('login'));
 });
 
+describe('pagination', function (): void {
+    it('hides the pager when everything fits on one page', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(3)->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])
+            ->assertDontSee('nextPage', escape: false);
+    });
+
+    it('offers the pager when there is more than one page', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(30)->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])
+            ->assertSee('nextPage', escape: false);
+    });
+});
+
 describe('clearing a channel', function (): void {
     it('marks every unwatched video from the channel in one action', function (): void {
         $channel = calmChannel();

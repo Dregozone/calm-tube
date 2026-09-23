@@ -23,6 +23,7 @@ channels ──< videos
 | `uploads_playlist_id` | string(32) | yes | null | Stored for possible future backfill; unused |
 | `is_enabled` | boolean | no | `true` | Disabled channels are not refreshed and not shown in the feed |
 | `playback_rate` | float | yes | `null` | Speed every video from this channel plays at; null is normal |
+| `outro_seconds` | smallint | yes | `null` | Length of the plug that ends every upload; the video counts as finished that many seconds early. Null plays to the end |
 | `sample_limit` | integer | yes | `null` | Uploads a day that reach the feed; null is all of them |
 | `feed_etag` | string | yes | null | For conditional RSS requests |
 | `feed_last_modified` | string | yes | null | For conditional RSS requests |
@@ -91,6 +92,7 @@ protected function casts(): array
         'is_short' => 'boolean',
         'is_enabled' => 'boolean',
         'playback_rate' => 'float',
+        'outro_seconds' => 'integer',
     ];
 }
 ```
@@ -221,6 +223,7 @@ Schema::create('channels', function (Blueprint $table): void {
     $table->string('uploads_playlist_id', 32)->nullable();
     $table->boolean('is_enabled')->default(true)->index();
     $table->float('playback_rate')->nullable();
+    $table->unsignedSmallInteger('outro_seconds')->nullable();
     $table->string('feed_etag')->nullable();
     $table->string('feed_last_modified')->nullable();
     $table->timestamp('last_refreshed_at')->nullable();

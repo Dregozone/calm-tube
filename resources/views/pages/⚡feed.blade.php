@@ -261,7 +261,7 @@ new #[Title('Feed')] class extends Component
     }
 }; ?>
 
-<section class="mx-auto w-full max-w-7xl px-4 py-8" @if ($stale) wire:init="autoRefresh" @endif>
+<section class="w-full" @if ($stale) wire:init="autoRefresh" @endif>
     <div class="flex flex-wrap items-start justify-between gap-4">
         <flux:heading size="xl" level="1">{{ __('Feed') }}</flux:heading>
 
@@ -347,7 +347,7 @@ new #[Title('Feed')] class extends Component
                 @endforeach
             </flux:select>
 
-            <flux:button
+            {{-- <flux:button
                 wire:click="markPageWatched"
                 wire:confirm="{{ __('Mark every video on this page as watched?') }}"
                 size="sm"
@@ -356,7 +356,7 @@ new #[Title('Feed')] class extends Component
                 class="sm:ms-auto"
             >
                 {{ __('Mark page watched') }}
-            </flux:button>
+            </flux:button> --}}
         </div>
     @endunless
 
@@ -401,39 +401,12 @@ new #[Title('Feed')] class extends Component
             </flux:text>
         </div>
     @else
-        <div class="mt-6 grid grid-cols-1 gap-x-5 gap-y-8 md:grid-cols-2 xl:grid-cols-3">
+        <x-video-grid class="mt-5">
             @foreach ($videos as $video)
                 <livewire:video-card :video="$video" :wire:key="'card-'.$video->id" />
             @endforeach
-        </div>
+        </x-video-grid>
 
-        <div class="mt-10 flex flex-col items-center gap-3">
-            <flux:text size="sm">
-                {{ __('Showing') }} {{ $videos->firstItem() }}–{{ $videos->lastItem() }}
-                {{ __('of') }} {{ $videos->total() }}
-            </flux:text>
-
-            <div class="flex items-center gap-2">
-                <flux:button
-                    wire:click="previousPage"
-                    :disabled="$videos->onFirstPage()"
-                    variant="subtle"
-                    size="sm"
-                    icon="arrow-left"
-                >
-                    {{ __('Previous') }}
-                </flux:button>
-
-                <flux:button
-                    wire:click="nextPage"
-                    :disabled="! $videos->hasMorePages()"
-                    variant="subtle"
-                    size="sm"
-                    icon:trailing="arrow-right"
-                >
-                    {{ __('Next') }}
-                </flux:button>
-            </div>
-        </div>
+        <x-pager :paginator="$videos" class="mt-8" />
     @endif
 </section>

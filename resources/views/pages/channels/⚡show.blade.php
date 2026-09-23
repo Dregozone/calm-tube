@@ -166,7 +166,7 @@ new class extends Component
     }
 }; ?>
 
-<section class="mx-auto w-full max-w-7xl px-4 py-8">
+<section class="w-full">
     <flux:button :href="route('channels.index')" wire:navigate variant="subtle" size="sm" icon="arrow-left">
         {{ __('All channels') }}
     </flux:button>
@@ -303,39 +303,12 @@ new class extends Component
             </flux:button>
         </div>
     @else
-        <div class="mt-6 grid grid-cols-1 gap-x-5 gap-y-8 md:grid-cols-2 xl:grid-cols-3">
+        <x-video-grid class="mt-5">
             @foreach ($videos as $video)
                 <livewire:video-card :video="$video" :wire:key="'card-'.$video->id" />
             @endforeach
-        </div>
+        </x-video-grid>
 
-        <div class="mt-10 flex flex-col items-center gap-3">
-            <flux:text size="sm">
-                {{ __('Showing') }} {{ $videos->firstItem() }}–{{ $videos->lastItem() }}
-                {{ __('of') }} {{ $videos->total() }}
-            </flux:text>
-
-            <div class="flex items-center gap-2">
-                <flux:button
-                    wire:click="previousPage"
-                    :disabled="$videos->onFirstPage()"
-                    variant="subtle"
-                    size="sm"
-                    icon="arrow-left"
-                >
-                    {{ __('Previous') }}
-                </flux:button>
-
-                <flux:button
-                    wire:click="nextPage"
-                    :disabled="! $videos->hasMorePages()"
-                    variant="subtle"
-                    size="sm"
-                    icon:trailing="arrow-right"
-                >
-                    {{ __('Next') }}
-                </flux:button>
-            </div>
-        </div>
+        <x-pager :paginator="$videos" class="mt-8" />
     @endif
 </section>

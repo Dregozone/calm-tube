@@ -26,6 +26,38 @@ it('shows the archived title, channel and duration', function (): void {
         ->assertSee('12:04');
 });
 
+describe('time to watch', function (): void {
+    it('shows the time at the channel speed rather than the length', function (): void {
+        $video = Video::factory()->for(calmChannel(['playback_rate' => 2.0]))->create(['duration_seconds' => 600]);
+
+        Livewire::test('video-card', ['video' => $video])
+            ->assertSee('5:00')
+            ->assertSee('2×');
+    });
+
+    it('leaves the channel outro plug off the time', function (): void {
+        $video = Video::factory()->for(calmChannel(['outro_seconds' => 15]))->create(['duration_seconds' => 615]);
+
+        Livewire::test('video-card', ['video' => $video])
+            ->assertSee('10:00')
+            ->assertDontSee('×');
+    });
+
+    it('applies the outro before the speed', function (): void {
+        $video = Video::factory()
+            ->for(calmChannel(['playback_rate' => 2.0, 'outro_seconds' => 20]))
+            ->create(['duration_seconds' => 620]);
+
+        Livewire::test('video-card', ['video' => $video])->assertSee('5:00');
+    });
+
+    it('ignores an outro as long as the video itself', function (): void {
+        $video = Video::factory()->for(calmChannel(['outro_seconds' => 30]))->create(['duration_seconds' => 20]);
+
+        Livewire::test('video-card', ['video' => $video])->assertSee('0:20');
+    });
+});
+
 it('serves the thumbnail from the archive rather than YouTube', function (): void {
     $video = Video::factory()->for(calmChannel())->archived()->create();
 

@@ -653,6 +653,12 @@ control is (the channel filter on the feed, the add form on the channels page), 
 closes any modal (Flux default). No j/k card-by-card navigation — that's a scrolling-speed
 feature, and speed isn't the goal.
 
+The watch page adds player keys on top: `Space`/`k` play–pause, `←`/`→` seek by
+`player.seek_seconds`, `f` fullscreen, `m` mute. They live in the page's own `@script`, torn
+down on `livewire:navigating`, and they return the focus to the page whenever the iframe takes
+it, since keys pressed inside a cross-origin player never reach the document. The key after
+`g` is consumed by the global handler, so `g f` cannot also toggle fullscreen.
+
 The handler lives in `partials/keyboard.blade.php`, included by the layout and bound to the
 document, which survives `wire:navigate`; a `window` flag stops a second visit stacking
 another set of listeners. `g` waits 1.5 seconds for its destination and then forgets it, so a

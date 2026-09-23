@@ -339,6 +339,91 @@ describe('returning to the feed', function (): void {
     });
 });
 
+it('is titled after the video', function (): void {
+    $video = watchable(['title' => 'The Title I Archived']);
+
+    $this->get(route('videos.watch', $video))
+        ->assertSee('The Title I Archived - Calm Tube');
+});
+
+describe('finishing early', function (): void {
+    it('finishes at the real end when the channel has no outro', function (): void {
+        $this->get(route('videos.watch', watchable()))
+            ->assertSee('data-outro-seconds="0"', escape: false);
+    });
+
+    it('finishes before the channel outro plug', function (): void {
+        $video = Video::factory()->for(calmChannel(['outro_seconds' => 15]))->create(['duration_seconds' => 600]);
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('data-outro-seconds="15"', escape: false);
+    });
+
+    it('plays the whole of a video shorter than the outro', function (): void {
+        $video = Video::factory()->for(calmChannel(['outro_seconds' => 15]))->create(['duration_seconds' => 10]);
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('data-outro-seconds="0"', escape: false);
+    });
+
+    it('sets the channel outro from the watch page', function (): void {
+        $video = watchable();
+
+        Livewire::test('pages::watch', ['video' => $video])
+            ->set('outroSeconds', '15')
+            ->assertHasNoErrors()
+            ->assertDispatched('outro-changed', seconds: 15);
+
+        expect($video->channel->fresh()->outro_seconds)->toBe(15);
+    });
+
+    it('goes back to the real end when the outro is cleared', function (): void {
+        $video = Video::factory()->for(calmChannel(['outro_seconds' => 15]))->create();
+
+        Livewire::test('pages::watch', ['video' => $video])
+            ->assertSet('outroSeconds', '15')
+            ->set('outroSeconds', '')
+            ->assertDispatched('outro-changed', seconds: 0);
+
+        expect($video->channel->fresh()->outro_seconds)->toBeNull();
+    });
+
+    it('refuses an outro that is not a sensible number of seconds', function (): void {
+        $video = watchable();
+
+        Livewire::test('pages::watch', ['video' => $video])
+            ->set('outroSeconds', '500')
+            ->assertHasErrors('outroSeconds');
+
+        expect($video->channel->fresh()->outro_seconds)->toBeNull();
+    });
+
+    it('offers an outro set elsewhere even when it is not one of the presets', function (): void {
+        $video = Video::factory()->for(calmChannel(['outro_seconds' => 17]))->create();
+
+        Livewire::test('pages::watch', ['video' => $video])->assertSee('17 s before');
+    });
+
+    it('still shows the real duration below the player', function (): void {
+        $video = Video::factory()
+            ->for(calmChannel(['outro_seconds' => 15, 'playback_rate' => 2.0]))
+            ->create(['duration_seconds' => 724]);
+
+        Livewire::test('pages::watch', ['video' => $video])->assertSee('12:04');
+    });
+});
+
+describe('player keys', function (): void {
+    it('carries the seek step into the player', function (): void {
+        config()->set('calm-tube.player.seek_seconds', 15);
+
+        $this->get(route('videos.watch', watchable()))
+            ->assertSee('data-seek-seconds="15"', escape: false)
+            ->assertSee('ArrowLeft', escape: false)
+            ->assertSee('togglePlaying', escape: false);
+    });
+});
+
 describe('playback speed', function (): void {
     it('plays at normal speed when the channel has no preference', function (): void {
         $video = watchable();

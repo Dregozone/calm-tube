@@ -108,7 +108,20 @@ Scheduled: refresh hourly, enrich at 04:00, archive at 04:30, prune Mondays at 0
 | `g` then `f` | Feed |
 | `g` then `c` | Channels |
 | `/` | Focus this page's one text control — the channel filter, or the add form |
-| `Esc` | Close a modal |
+| `?` | Show every shortcut that works on this page |
+| `Esc` | Close a modal, or stop the end-of-video countdown |
+
+On the watch page, for the player:
+
+| Key | Does |
+| --- | --- |
+| `Space` or `k` | Play / pause (or resume, when a "you stopped at" prompt is showing) |
+| `←` / `→` | Back / forward 10 seconds (`seek_seconds` in `config/calm-tube.php`) |
+| `f` | Fullscreen |
+| `m` | Mute |
+
+These work however you last touched the video: clicking the player would normally hand it the
+keyboard, so the page takes the focus straight back.
 
 There is deliberately no `j`/`k` card-by-card navigation. That is a scrolling-speed feature,
 and speed is not the goal.
@@ -135,6 +148,17 @@ each day; everything else stays on the channel page under a **Set aside** tab.
 
 Length is the whole rule, which is why it is per channel and off by default — it works on a
 clip farm and is worthless on a channel whose uploads are all a similar length.
+
+### Channels that end every video with an ad
+
+Some channels close every upload with the same sponsor plug. Set how long it runs with the
+**Finish early** picker on the watch page, or *"Finish early (seconds)"* on the channel's
+**Edit** screen, and each of its videos counts as finished that many seconds before the end: it is marked watched and the countdown back to your list starts, while the plug plays
+on underneath in case you want it. Press *Stay here* to watch to the end.
+
+Feed thumbnails show how long a video will take **you**: the channel's outro is left off and its
+speed applied, so a 10:00 video on a 2× channel shows `5:00 · 2×`. The watch page always shows
+the real length.
 
 Long videos remember where you stopped. Reopening one offers "Resume from 18:42" rather than
 seeking there on its own, and the card shows a thin bar across the thumbnail.

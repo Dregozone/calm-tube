@@ -42,6 +42,8 @@ use Illuminate\Support\Facades\Storage;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read string|null $duration_for_humans
+ * @property-read int|null $watching_seconds
+ * @property-read string|null $watching_time_for_humans
  * @property-read string|null $resume_for_humans
  * @property-read int<0, 100>|null $percent_watched
  * @property-read Channel $channel
@@ -217,6 +219,42 @@ class Video extends Model
     {
         return Attribute::get(
             fn (): ?string => app(DurationParser::class)->toHuman($this->duration_seconds)
+        );
+    }
+
+    /**
+     * How long the video will actually take you, for the feed: its channel's
+     * speed applied, and its outro plug left off. The watch page shows the
+     * real duration; this is only an at-a-glance answer to "have I got time?"
+     *
+     * Worked out on every read rather than stored, so changing a channel's
+     * speed changes every one of its videos at once.
+     *
+     * @return Attribute<int|null, never>
+     */
+    protected function watchingSeconds(): Attribute
+    {
+        return Attribute::get(function (): ?int {
+            if ($this->duration_seconds === null) {
+                return null;
+            }
+
+            $outro = $this->channel->outro_seconds ?? 0;
+            $seconds = $outro > 0 && $outro < $this->duration_seconds
+                ? $this->duration_seconds - $outro
+                : $this->duration_seconds;
+
+            return (int) round($seconds / $this->channel->effective_playback_rate);
+        });
+    }
+
+    /**
+     * @return Attribute<string|null, never>
+     */
+    protected function watchingTimeForHumans(): Attribute
+    {
+        return Attribute::get(
+            fn (): ?string => app(DurationParser::class)->toHuman($this->watching_seconds)
         );
     }
 

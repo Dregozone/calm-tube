@@ -121,6 +121,9 @@ return [
         // pauses, which is what clicking a video is for. Set to 0 to allow
         // end cards through.
         'end_card_mask_seconds' => 20,
+
+        // How far the left and right arrow keys jump on the watch page.
+        'seek_seconds' => 10,
     ],
 
     /*
@@ -134,7 +137,7 @@ return [
     */
 
     'feed' => [
-        'per_page' => 24,
+        'per_page' => 18,
 
         // A fresh session opens on what you have not seen rather than on the
         // whole archive. Whichever you last chose is remembered after that.

@@ -29,6 +29,9 @@ new #[Title('Channels')] class extends Component
 
     public string $playbackRate = '';
 
+    /** Seconds of sponsor plug at the end of every video; empty means none. */
+    public string $outroSeconds = '';
+
     /** Uploads a day to keep from this channel; empty means all of them. */
     public string $sampleLimit = '';
 
@@ -111,6 +114,7 @@ new #[Title('Channels')] class extends Component
         $this->editingId = $channel->id;
         $this->customName = $channel->custom_name ?? '';
         $this->playbackRate = $channel->playback_rate === null ? '' : (string) $channel->playback_rate;
+        $this->outroSeconds = $channel->outro_seconds === null ? '' : (string) $channel->outro_seconds;
         $this->sampleLimit = $channel->sample_limit === null ? '' : (string) $channel->sample_limit;
         $this->resetErrorBag();
         $this->editOpen = true;
@@ -129,6 +133,7 @@ new #[Title('Channels')] class extends Component
                 'nullable',
                 Rule::in(array_map(fn (float $rate): string => (string) $rate, $rates)),
             ],
+            'outroSeconds' => ['nullable', 'integer', 'min:1', 'max:120'],
             'sampleLimit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
@@ -137,6 +142,7 @@ new #[Title('Channels')] class extends Component
         $channel->forceFill([
             'custom_name' => $this->customName === '' ? null : $this->customName,
             'playback_rate' => $this->playbackRate === '' ? null : (float) $this->playbackRate,
+            'outro_seconds' => $this->outroSeconds === '' ? null : (int) $this->outroSeconds,
             'sample_limit' => $this->sampleLimit === '' ? null : (int) $this->sampleLimit,
         ])->save();
 
@@ -318,6 +324,9 @@ new #[Title('Channels')] class extends Component
                             @if ($channel->playback_rate !== null)
                                 · {{ $channel->effective_playback_rate }}×
                             @endif
+                            @if ($channel->outro_seconds !== null)
+                                · {{ __('finishes :n s early', ['n' => $channel->outro_seconds]) }}
+                            @endif
                             @if ($channel->isSampled())
                                 · {{ __('keeping :n a day', ['n' => $channel->sample_limit]) }}
                                 ({{ $channel->set_aside_count }} {{ __('set aside') }})
@@ -407,6 +416,16 @@ new #[Title('Channels')] class extends Component
                         <flux:select.option value="{{ $rate }}">{{ $rate }}×</flux:select.option>
                     @endforeach
                 </flux:select>
+
+                <flux:input
+                    wire:model="outroSeconds"
+                    type="number"
+                    min="1"
+                    max="120"
+                    :label="__('Finish early (seconds)')"
+                    placeholder="15"
+                    :description="__('For channels that end every video with the same sponsor plug. The video counts as finished this many seconds before the end, and you are sent back to your list. Leave it empty to watch to the end.')"
+                />
 
                 <flux:select
                     wire:model="sampleLimit"

@@ -4,22 +4,56 @@ use App\Models\Video;
 use App\Support\DescriptionRenderer;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rule;
+use Illuminate\View\View;
 use Livewire\Attributes\Computed;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
-new #[Title('Watch')] class extends Component
+new class extends Component
 {
     public Video $video;
 
     /** The channel's playback speed as a form value; empty means normal. */
     public string $playbackRate = '';
 
+    /** The channel's outro length as a form value; empty means none. */
+    public string $outroSeconds = '';
+
     public function mount(): void
     {
         $this->playbackRate = $this->video->channel->playback_rate === null
             ? ''
             : (string) $this->video->channel->playback_rate;
+
+        $this->outroSeconds = $this->video->channel->outro_seconds === null
+            ? ''
+            : (string) $this->video->channel->outro_seconds;
+    }
+
+    /**
+     * Named after the video, so a tab or a history entry says which one. The
+     * layout is flush because every pixel of height is the player's.
+     */
+    public function render(): View
+    {
+        return $this->view()
+            ->title($this->video->title)
+            ->layout('layouts::app', ['flush' => true]);
+    }
+
+    /**
+     * Where the video counts as over: its channel's outro plug left off, or
+     * zero for the real end. An outro as long as the video itself is a
+     * mistake in the setting, not a video to skip entirely.
+     */
+    public function outroSeconds(): int
+    {
+        $outro = $this->video->channel->outro_seconds ?? 0;
+
+        if ($this->video->duration_seconds !== null && $outro >= $this->video->duration_seconds) {
+            return 0;
+        }
+
+        return $outro;
     }
 
     public function markWatched(): void
@@ -103,6 +137,43 @@ new #[Title('Watch')] class extends Component
     }
 
     /**
+     * Set here because the plug playing in front of you is when you notice
+     * it. Like speed, it belongs to the channel, and it applies to the video
+     * you are watching straight away.
+     */
+    public function updatedOutroSeconds(): void
+    {
+        $this->validateOnly('outroSeconds', [
+            'outroSeconds' => ['nullable', 'integer', 'min:1', 'max:120'],
+        ]);
+
+        $this->video->channel->forceFill([
+            'outro_seconds' => $this->outroSeconds === '' ? null : (int) $this->outroSeconds,
+        ])->save();
+
+        $this->dispatch('outro-changed', seconds: $this->outroSeconds());
+    }
+
+    /**
+     * The lengths offered in the picker, plus whatever odd number was typed
+     * into the channel's edit screen, so the picker never misreports it.
+     *
+     * @return list<int>
+     */
+    public function outroChoices(): array
+    {
+        $choices = [5, 10, 15, 20, 25, 30, 45, 60];
+        $current = $this->video->channel->outro_seconds;
+
+        if ($current !== null && ! in_array($current, $choices, true)) {
+            $choices[] = $current;
+            sort($choices);
+        }
+
+        return $choices;
+    }
+
+    /**
      * Deliberately a link and never an autoplay. One explicit next video is
      * the only thing this app ever suggests.
      */
@@ -175,138 +246,155 @@ new #[Title('Watch')] class extends Component
     }
 }; ?>
 
-<section class="w-full pb-12">
-    <div class="mx-auto w-full max-w-7xl px-4 pt-6">
-        <flux:button :href="route('feed')" wire:navigate variant="subtle" size="sm" icon="arrow-left">
-            {{ __('Back to feed') }}
-        </flux:button>
-    </div>
-
+<section class="w-full px-4 pb-12 pt-3 lg:px-6">
     {{-- As large as the viewport allows while staying whole: the width is
-         capped by the height left over, so the player never runs off screen. --}}
-    <div
-        class="mx-auto mt-4 w-full px-4"
-        style="max-width: min(100%, calc((100dvh - 11rem) * 16 / 9 + 2rem));"
-    >
-        @if ($this->video->isUnavailable())
-            <div class="flex aspect-video w-full flex-col items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
-                <flux:heading size="lg">{{ __('This video is no longer available on YouTube.') }}</flux:heading>
+         capped by the height left over, so the player never runs off screen.
+         The way back sits in the gutter beside it, where the pointer goes
+         first, and an empty twin on the right keeps the player centred. It
+         is also under the video, with its label, for smaller screens. --}}
+    <div class="flex items-start justify-center gap-3">
+        <div class="hidden shrink-0 sm:block">
+            <flux:tooltip :content="__('Back to feed')" position="right">
+                <flux:button
+                    :href="$this->returnUrl()"
+                    wire:navigate
+                    variant="subtle"
+                    size="sm"
+                    icon="arrow-left"
+                    square
+                    :aria-label="__('Back to feed')"
+                />
+            </flux:tooltip>
+        </div>
 
-                <flux:text class="mt-2">
-                    {{ __('What was archived here is kept below.') }}
-                </flux:text>
-            </div>
-        @else
-            {{-- wire:ignore matters here. Marking the video watched re-renders
-                 the component, and without it Livewire's morph would put the
-                 panels back to hidden the instant the video ended. --}}
-            <div
-                wire:ignore
-                id="calm-stage"
-                class="relative aspect-video w-full overflow-hidden rounded-xl bg-black shadow-xl"
-                data-return-url="{{ $this->returnUrl() }}"
-                data-playback-rate="{{ $this->video->channel->effective_playback_rate }}"
-                data-countdown-seconds="{{ config('calm-tube.player.countdown_seconds') }}"
-                data-mask-seconds="{{ config('calm-tube.player.end_card_mask_seconds') }}"
-                data-resume-seconds="{{ $this->video->isResumable() ? $this->video->resume_seconds : 0 }}"
-                data-autoplay="{{ $this->shouldAutoplay() ? 1 : 0 }}"
-            >
-                <iframe
-                    id="calm-player"
-                    class="absolute inset-0 size-full"
-                    src="{{ $this->embedUrl() }}"
-                    title="{{ $this->video->title }}"
-                    frameborder="0"
-                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen
-                ></iframe>
+        <div
+            class="min-w-0 flex-1"
+            style="max-width: min(100%, calc((100dvh - 1.5rem) * 16 / 9));"
+        >
+            @if ($this->video->isUnavailable())
+                <div class="flex aspect-video w-full flex-col items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
+                    <flux:heading size="lg">{{ __('This video is no longer available on YouTube.') }}</flux:heading>
 
-                {{-- Offered, never applied behind your back: a video that
-                     silently starts in the middle feels broken, and sometimes
-                     you did mean to watch it again from the top. --}}
-                @if ($this->video->isResumable())
+                    <flux:text class="mt-2">
+                        {{ __('What was archived here is kept below.') }}
+                    </flux:text>
+                </div>
+            @else
+                {{-- wire:ignore matters here. Marking the video watched re-renders
+                     the component, and without it Livewire's morph would put the
+                     panels back to hidden the instant the video ended. --}}
+                <div
+                    wire:ignore
+                    id="calm-stage"
+                    class="relative aspect-video w-full overflow-hidden rounded-xl bg-black shadow-xl"
+                    data-return-url="{{ $this->returnUrl() }}"
+                    data-playback-rate="{{ $this->video->channel->effective_playback_rate }}"
+                    data-countdown-seconds="{{ config('calm-tube.player.countdown_seconds') }}"
+                    data-mask-seconds="{{ config('calm-tube.player.end_card_mask_seconds') }}"
+                    data-outro-seconds="{{ $this->outroSeconds() }}"
+                    data-seek-seconds="{{ config('calm-tube.player.seek_seconds') }}"
+                    data-resume-seconds="{{ $this->video->isResumable() ? $this->video->resume_seconds : 0 }}"
+                    data-autoplay="{{ $this->shouldAutoplay() ? 1 : 0 }}"
+                >
+                    <iframe
+                        id="calm-player"
+                        class="absolute inset-0 size-full"
+                        src="{{ $this->embedUrl() }}"
+                        title="{{ $this->video->title }}"
+                        frameborder="0"
+                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                        allowfullscreen
+                    ></iframe>
+
+                    {{-- Offered, never applied behind your back: a video that
+                         silently starts in the middle feels broken, and sometimes
+                         you did mean to watch it again from the top. --}}
+                    @if ($this->video->isResumable())
+                        <div
+                            id="calm-resume"
+                            class="absolute inset-x-0 bottom-0 z-20 flex flex-wrap items-center justify-center gap-3 bg-zinc-950/90 p-4 text-center"
+                            data-resume-label="{{ $this->video->resume_for_humans }}"
+                        >
+                            <flux:text class="text-white">
+                                {{ __('You stopped at') }}
+                                <span class="tabular-nums">{{ $this->video->resume_for_humans }}</span>.
+                            </flux:text>
+
+                            <div class="flex items-center gap-2">
+                                <flux:button id="calm-resume-go" variant="primary" size="sm">
+                                    {{ __('Resume') }}
+                                </flux:button>
+
+                                <flux:button id="calm-resume-restart" variant="subtle" size="sm" class="!text-white">
+                                    {{ __('Start again') }}
+                                </flux:button>
+                            </div>
+                        </div>
+                    @endif
+
+                    {{-- Transparent, and only for the last seconds of the video:
+                         it covers the end cards YouTube draws over the picture,
+                         which no embed parameter can turn off. The control bar is
+                         left exposed, and a click pauses rather than doing
+                         nothing, so the one useful click on a video survives. --}}
                     <div
-                        id="calm-resume"
-                        class="absolute inset-x-0 bottom-0 z-20 flex flex-wrap items-center justify-center gap-3 bg-zinc-950/90 p-4 text-center"
-                        data-resume-label="{{ $this->video->resume_for_humans }}"
-                    >
-                        <flux:text class="text-white">
-                            {{ __('You stopped at') }}
-                            <span class="tabular-nums">{{ $this->video->resume_for_humans }}</span>.
-                        </flux:text>
+                        id="calm-mask"
+                        class="absolute inset-x-0 bottom-14 top-0 z-5 hidden cursor-pointer"
+                        aria-hidden="true"
+                    ></div>
 
-                        <div class="flex items-center gap-2">
-                            <flux:button id="calm-resume-go" variant="primary" size="sm">
-                                {{ __('Resume') }}
+                    {{-- In the DOM from the start: built when the video ends, it
+                         would appear a beat after YouTube's own end screen. --}}
+                    <div
+                        id="calm-ended"
+                        class="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-3 bg-zinc-950/95 p-8 text-center"
+                    >
+                        <flux:heading size="lg" class="text-white">{{ __('Finished.') }}</flux:heading>
+
+                        <div class="mt-2 flex flex-col items-center gap-2">
+                            <flux:button id="calm-back" variant="primary" size="sm">
+                                {{ __('Back to feed') }}
                             </flux:button>
 
-                            <flux:button id="calm-resume-restart" variant="subtle" size="sm" class="!text-white">
-                                {{ __('Start again') }}
+                            @if ($this->nextUnwatched)
+                                <flux:button
+                                    :href="route('videos.watch', $this->nextUnwatched)"
+                                    variant="subtle"
+                                    size="sm"
+                                    class="!text-white"
+                                >
+                                    <span class="line-clamp-1">
+                                        {{ __('Next unwatched') }}: {{ $this->nextUnwatched->title }}
+                                    </span>
+                                </flux:button>
+                            @endif
+
+                            <flux:button id="calm-replay" variant="subtle" size="sm" class="!text-white">
+                                {{ __('Replay') }}
                             </flux:button>
                         </div>
                     </div>
-                @endif
 
-                {{-- Transparent, and only for the last seconds of the video:
-                     it covers the end cards YouTube draws over the picture,
-                     which no embed parameter can turn off. The control bar is
-                     left exposed, and a click pauses rather than doing
-                     nothing, so the one useful click on a video survives. --}}
-                <div
-                    id="calm-mask"
-                    class="absolute inset-x-0 bottom-14 top-0 z-5 hidden cursor-pointer"
-                    aria-hidden="true"
-                ></div>
+                    <div
+                        id="calm-error"
+                        class="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-3 bg-zinc-950/95 p-8 text-center"
+                    >
+                        <flux:heading size="lg" class="text-white">
+                            {{ __("This video can't be played here.") }}
+                        </flux:heading>
 
-                {{-- In the DOM from the start: built when the video ends, it
-                     would appear a beat after YouTube's own end screen. --}}
-                <div
-                    id="calm-ended"
-                    class="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-3 bg-zinc-950/95 p-8 text-center"
-                >
-                    <flux:heading size="lg" class="text-white">{{ __('Finished.') }}</flux:heading>
-
-                    <div class="mt-2 flex flex-col items-center gap-2">
-                        <flux:button id="calm-back" variant="primary" size="sm">
-                            {{ __('Back to feed') }}
-                        </flux:button>
-
-                        @if ($this->nextUnwatched)
-                            <flux:button
-                                :href="route('videos.watch', $this->nextUnwatched)"
-                                variant="subtle"
-                                size="sm"
-                                class="!text-white"
-                            >
-                                <span class="line-clamp-1">
-                                    {{ __('Next unwatched') }}: {{ $this->nextUnwatched->title }}
-                                </span>
-                            </flux:button>
-                        @endif
-
-                        <flux:button id="calm-replay" variant="subtle" size="sm" class="!text-white">
-                            {{ __('Replay') }}
+                        <flux:button href="{{ $this->watchOnYouTubeUrl() }}" target="_blank" rel="noopener noreferrer" variant="primary" size="sm">
+                            {{ __('Open on YouTube') }}
                         </flux:button>
                     </div>
                 </div>
+            @endif
+        </div>
 
-                <div
-                    id="calm-error"
-                    class="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-3 bg-zinc-950/95 p-8 text-center"
-                >
-                    <flux:heading size="lg" class="text-white">
-                        {{ __("This video can't be played here.") }}
-                    </flux:heading>
-
-                    <flux:button href="{{ $this->watchOnYouTubeUrl() }}" target="_blank" rel="noopener noreferrer" variant="primary" size="sm">
-                        {{ __('Open on YouTube') }}
-                    </flux:button>
-                </div>
-            </div>
-        @endif
+        <div class="hidden w-8 shrink-0 sm:block" aria-hidden="true"></div>
     </div>
 
-    <div class="mx-auto mt-6 w-full max-w-5xl px-4">
+    <div class="mx-auto mt-5 w-full max-w-5xl">
         <flux:heading size="xl" level="1">{{ $this->video->title }}</flux:heading>
 
         <div class="mt-2 flex flex-wrap items-center gap-2">
@@ -332,6 +420,10 @@ new #[Title('Watch')] class extends Component
         </div>
 
         <div class="mt-5 flex flex-wrap items-center gap-2">
+            <flux:button :href="$this->returnUrl()" wire:navigate variant="subtle" size="sm" icon="arrow-left">
+                {{ __('Back to feed') }}
+            </flux:button>
+
             <flux:button wire:click="toggleWatched" size="sm" variant="subtle">
                 {{ $this->video->isWatched() ? __('Mark as unwatched') : __('Mark as watched') }}
             </flux:button>
@@ -347,6 +439,23 @@ new #[Title('Watch')] class extends Component
             </a>
 
             <div class="flex items-center gap-2 sm:ms-auto">
+                <flux:text size="sm" id="calm-outro-label">{{ __('Finish early') }}</flux:text>
+
+                <flux:select
+                    wire:model.live="outroSeconds"
+                    size="sm"
+                    class="max-w-40"
+                    aria-labelledby="calm-outro-label"
+                >
+                    <flux:select.option value="">{{ __('At the end') }}</flux:select.option>
+
+                    @foreach ($this->outroChoices() as $seconds)
+                        <flux:select.option value="{{ $seconds }}">{{ __(':n s before', ['n' => $seconds]) }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+
+            <div class="flex items-center gap-2">
                 <flux:text size="sm" id="calm-speed-label">{{ __('Speed') }}</flux:text>
 
                 <flux:select
@@ -372,6 +481,10 @@ new #[Title('Watch')] class extends Component
                 {{ __('plays at') }} {{ $this->video->channel->effective_playback_rate }}×.
             @else
                 {{ __('Speed applies to every video from this channel.') }}
+            @endif
+
+            @if ($this->video->channel->outro_seconds !== null)
+                {{ __('Finishes :n seconds before the end, to skip the outro.', ['n' => $this->video->channel->outro_seconds]) }}
             @endif
         </flux:text>
 
@@ -448,16 +561,30 @@ new #[Title('Watch')] class extends Component
         const reveal = (panel) => panel?.classList.replace('hidden', 'flex');
         const conceal = (panel) => panel?.classList.replace('flex', 'hidden');
 
+        // Everything below listens on the document or the window, which both
+        // outlive a wire:navigate visit; leaving the page takes it all down.
+        const listening = new AbortController();
+        const signal = listening.signal;
+        document.addEventListener('livewire:navigating', () => listening.abort(), { once: true });
+
         const mask = document.getElementById('calm-mask');
         const returnUrl = stage.dataset.returnUrl;
         const total = Number(stage.dataset.countdownSeconds || 5);
         const maskFrom = Number(stage.dataset.maskSeconds || 0);
+        let outro = Number(stage.dataset.outroSeconds || 0);
+        const seekStep = Number(stage.dataset.seekSeconds || 10);
         const resumeAt = Number(stage.dataset.resumeSeconds || 0);
         const resumePanel = document.getElementById('calm-resume');
         const autoplay = stage.dataset.autoplay === '1';
         let rate = Number(stage.dataset.playbackRate || 1);
+        let player = null;
         let watching = null;
         let recording = null;
+
+        // Set once the outro is reached. The plug plays on under the
+        // countdown rather than being cut off, and a video that is already
+        // over must not start saving a resume point again.
+        let finishedEarly = false;
 
         let countdown = null;
 
@@ -476,6 +603,7 @@ new #[Title('Watch')] class extends Component
             const label = document.getElementById('calm-countdown-seconds');
             let remaining = total;
 
+            clearTimeout(countdown);
             reveal(modal);
 
             const tick = () => {
@@ -509,24 +637,36 @@ new #[Title('Watch')] class extends Component
             if (event.key === 'Escape' && countdown !== null) {
                 stopCountdown();
             }
-        });
+        }, { signal });
+
+        const isTyping = (element) =>
+            element instanceof HTMLElement &&
+            (element.isContentEditable ||
+                ['INPUT', 'TEXTAREA', 'SELECT'].includes(element.tagName));
 
         const boot = () => {
             // Polled rather than scheduled: the remaining time moves with
-            // seeking and with playback speed, and one check a second is
+            // seeking and with playback speed, and a check twice a second is
             // cheaper than getting either of those wrong.
             const watchForEndCards = () => {
                 clearInterval(watching);
 
-                if (maskFrom <= 0) {
+                if (maskFrom <= 0 && outro <= 0) {
                     return;
                 }
 
                 watching = setInterval(() => {
                     const left = player.getDuration() - player.getCurrentTime();
 
-                    left > 0 && left <= maskFrom ? reveal(mask) : conceal(mask);
-                }, 1000);
+                    if (maskFrom > 0) {
+                        left > 0 && left <= maskFrom ? reveal(mask) : conceal(mask);
+                    }
+
+                    if (outro > 0 && ! finishedEarly && left > 0 && left <= outro) {
+                        finishedEarly = true;
+                        finish();
+                    }
+                }, 500);
             };
 
             const stopWatching = () => {
@@ -540,6 +680,10 @@ new #[Title('Watch')] class extends Component
             const recordProgress = () => {
                 clearInterval(recording);
 
+                if (finishedEarly) {
+                    return;
+                }
+
                 recording = setInterval(() => {
                     $wire.saveProgress(Math.floor(player.getCurrentTime()));
                 }, 10000);
@@ -549,9 +693,23 @@ new #[Title('Watch')] class extends Component
                 clearInterval(recording);
                 recording = null;
 
-                if (save) {
+                if (save && ! finishedEarly) {
                     $wire.saveProgress(Math.floor(player.getCurrentTime()));
                 }
+            };
+
+            // The video is over, whether YouTube says so or the channel's
+            // outro has started. markWatched clears the resume point, so
+            // nothing may write one back after it.
+            const finish = () => {
+                // A fullscreen player would sit above the modal.
+                if (document.fullscreenElement) {
+                    document.exitFullscreen?.();
+                }
+
+                stopRecording(false);
+                $wire.markWatched();
+                startCountdown();
             };
 
             const applyRate = () => {
@@ -572,14 +730,19 @@ new #[Title('Watch')] class extends Component
                 }
             };
 
-            const player = new YT.Player(frame, {
+            player = new YT.Player(frame, {
                 events: {
                     onReady: start,
                     onStateChange(event) {
                         if (event.data === YT.PlayerState.PLAYING) {
-                            conceal(ended);
+                            // Playing on through the outro is expected, and
+                            // must not call off the countdown it started.
+                            if (! finishedEarly) {
+                                conceal(ended);
+                                stopCountdown();
+                            }
+
                             conceal(resumePanel);
-                            stopCountdown();
                             watchForEndCards();
                             recordProgress();
                             // YouTube resets the rate when a video actually
@@ -595,18 +758,9 @@ new #[Title('Watch')] class extends Component
                         }
 
                         if (event.data === YT.PlayerState.ENDED) {
-                            // A fullscreen player would sit above the modal.
-                            if (document.fullscreenElement) {
-                                document.exitFullscreen?.();
-                            }
-
                             stopWatching();
-                            // markWatched clears the resume point, so this
-                            // must not write one back after it.
-                            stopRecording(false);
                             reveal(ended);
-                            $wire.markWatched();
-                            startCountdown();
+                            finish();
                         }
                     },
                     onError(event) {
@@ -631,15 +785,27 @@ new #[Title('Watch')] class extends Component
                 player.setPlaybackRate(rate);
             });
 
+            // Set while the plug is playing, this finishes the video there and
+            // then, which is the point of setting it.
+            $wire.on('outro-changed', (event) => {
+                outro = Number(event.seconds ?? 0);
+
+                if (player.getPlayerState() === YT.PlayerState.PLAYING) {
+                    watchForEndCards();
+                }
+            });
+
             // Clicking the picture is how you pause a video; the mask must
             // not take that away, only the end cards underneath it.
             mask?.addEventListener('click', () => player.pauseVideo());
 
-            document.getElementById('calm-resume-go')?.addEventListener('click', () => {
+            const resume = () => {
                 conceal(resumePanel);
                 player.seekTo(resumeAt, true);
                 player.playVideo();
-            });
+            };
+
+            document.getElementById('calm-resume-go')?.addEventListener('click', resume);
 
             document.getElementById('calm-resume-restart')?.addEventListener('click', () => {
                 conceal(resumePanel);
@@ -649,15 +815,82 @@ new #[Title('Watch')] class extends Component
             });
 
             // Closing the tab mid-video is the ordinary way to leave one.
-            window.addEventListener('pagehide', () => stopRecording());
+            window.addEventListener('pagehide', () => stopRecording(), { signal });
 
             document.getElementById('calm-replay')?.addEventListener('click', () => {
                 stopCountdown();
                 conceal(ended);
+                finishedEarly = false;
                 $wire.clearProgress();
                 player.seekTo(0);
                 player.playVideo();
             });
+
+            // The player's own shortcuts only work while it has the focus,
+            // which it takes the moment you click it and never gives back.
+            // Handing the focus straight back to the page means the keys
+            // below work however you last touched the video.
+            window.addEventListener('blur', () => {
+                setTimeout(() => {
+                    if (document.activeElement === frame) {
+                        frame.blur();
+                        window.focus();
+                    }
+                }, 0);
+            }, { signal });
+
+            const seekBy = (seconds) => {
+                const to = player.getCurrentTime() + seconds;
+
+                player.seekTo(Math.max(0, Math.min(to, player.getDuration() - 1)), true);
+            };
+
+            const togglePlaying = () => {
+                if (resumePanel?.classList.contains('flex')) {
+                    resume();
+
+                    return;
+                }
+
+                player.getPlayerState() === YT.PlayerState.PLAYING
+                    ? player.pauseVideo()
+                    : player.playVideo();
+            };
+
+            const toggleFullscreen = () => {
+                document.fullscreenElement
+                    ? document.exitFullscreen?.()
+                    : frame.requestFullscreen?.();
+            };
+
+            document.addEventListener('keydown', (event) => {
+                if (event.metaKey || event.ctrlKey || event.altKey || isTyping(event.target)) {
+                    return;
+                }
+
+                // The countdown has the page; Esc is the only key it answers.
+                if (countdown !== null || typeof player.getPlayerState !== 'function') {
+                    return;
+                }
+
+                const actions = {
+                    ' ': togglePlaying,
+                    k: togglePlaying,
+                    ArrowLeft: () => seekBy(-seekStep),
+                    ArrowRight: () => seekBy(seekStep),
+                    f: toggleFullscreen,
+                    m: () => (player.isMuted() ? player.unMute() : player.mute()),
+                };
+
+                const action = actions[event.key];
+
+                if (action) {
+                    // Space would otherwise scroll the page or press whichever
+                    // button was last clicked.
+                    event.preventDefault();
+                    action();
+                }
+            }, { signal });
         };
 
         if (window.YT && window.YT.Player) {

@@ -23,37 +23,72 @@ new class extends Component
 }; ?>
 
 <article class="group flex flex-col" wire:key="video-{{ $video->id }}">
-    <a href="{{ route('videos.watch', $video) }}" wire:navigate class="block">
-        <div class="relative overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
-            {{-- Archived thumbnails keep whatever aspect YouTube served, so the
-                 container crops rather than the source being trusted. --}}
-            <img
-                src="{{ route('thumbnails.show', $video) }}"
-                alt=""
-                loading="lazy"
-                class="aspect-video w-full object-cover {{ $video->isWatched() ? 'opacity-50' : '' }}"
-            />
+    <div class="relative">
+        <a href="{{ route('videos.watch', $video) }}" wire:navigate class="block">
+            <div class="relative overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
+                {{-- Archived thumbnails keep whatever aspect YouTube served, so the
+                     container crops rather than the source being trusted. --}}
+                <img
+                    src="{{ route('thumbnails.show', $video) }}"
+                    alt=""
+                    loading="lazy"
+                    class="aspect-video w-full object-cover {{ $video->isWatched() ? 'opacity-50' : '' }}"
+                />
 
-            @if ($video->duration_for_humans)
-                <span class="absolute bottom-1.5 right-1.5 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white tabular-nums">
-                    {{ $video->duration_for_humans }}
-                </span>
-            @endif
+                {{-- How long it will take you, not how long it is: the channel's
+                     speed and outro skip are applied. The watch page has the
+                     real duration. --}}
+                @if ($video->watching_time_for_humans)
+                    <span
+                        class="absolute bottom-1.5 right-1.5 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white tabular-nums"
+                        @if ($video->watching_seconds !== $video->duration_seconds)
+                            title="{{ __('Takes :time to watch here; the video is :length long.', ['time' => $video->watching_time_for_humans, 'length' => $video->duration_for_humans]) }}"
+                        @endif
+                    >
+                        {{ $video->watching_time_for_humans }}
+                        @if ($video->channel->effective_playback_rate !== 1.0)
+                            <span class="text-white/60">· {{ $video->channel->effective_playback_rate }}×</span>
+                        @endif
+                    </span>
+                @endif
 
-            {{-- A record of where you got to, not a nudge to go back: no
-                 label, no percentage, just the width of the bar. --}}
-            @if ($video->percent_watched !== null && ! $video->isWatched())
-                <div class="absolute inset-x-0 bottom-0 h-1 bg-black/40">
-                    <div
-                        class="h-full bg-red-500"
-                        style="width: {{ $video->percent_watched }}%"
-                    ></div>
-                </div>
-            @endif
+                {{-- A record of where you got to, not a nudge to go back: no
+                     label, no percentage, just the width of the bar. --}}
+                @if ($video->percent_watched !== null && ! $video->isWatched())
+                    <div class="absolute inset-x-0 bottom-0 h-1 bg-black/40">
+                        <div
+                            class="h-full bg-red-500"
+                            style="width: {{ $video->percent_watched }}%"
+                        ></div>
+                    </div>
+                @endif
+            </div>
+        </a>
+
+        {{-- Over the picture rather than in a row of their own, so a card
+             is no taller than what it shows and more of the grid fits. --}}
+        <div class="absolute right-2 top-2 flex items-center gap-2 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
+            <button
+                type="button"
+                wire:click="toggleWatched"
+                class="rounded-md bg-black/80 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-black"
+            >
+                {{ $video->isWatched() ? __('Mark unwatched') : __('Mark watched') }}
+            </button>
+
+            <button
+                type="button"
+                wire:click="hide"
+                class="inline-flex items-center gap-1 rounded-md bg-black/80 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-black"
+                title="{{ __('Hide from feed') }}"
+            >
+                <flux:icon.x-mark variant="micro" />
+                {{ __('Hide') }}
+            </button>
         </div>
-    </a>
+    </div>
 
-    <div class="mt-2.5 flex flex-1 flex-col {{ $video->isWatched() ? 'opacity-60' : '' }}">
+    <div class="mt-2 flex flex-1 flex-col {{ $video->isWatched() ? 'opacity-60' : '' }}">
         <a href="{{ route('videos.watch', $video) }}" wire:navigate>
             <flux:heading class="line-clamp-2 leading-snug">{{ $video->title }}</flux:heading>
         </a>
@@ -66,24 +101,15 @@ new class extends Component
                 class="size-5 shrink-0 rounded-full bg-zinc-200 object-cover dark:bg-zinc-700"
             />
 
-            <flux:text size="sm" class="truncate">{{ $video->channel->display_name }}</flux:text>
-        </div>
-
-        <flux:text size="sm" class="mt-1">
-            {{ $video->published_at->diffForHumans() }}
-            @if ($video->isWatched())
-                · {{ __('watched') }}
-            @elseif ($video->isResumable())
-                · {{ __('stopped at') }} <span class="tabular-nums">{{ $video->resume_for_humans }}</span>
-            @endif
-        </flux:text>
-
-        <div class="mt-2 flex items-center gap-1 opacity-0 transition-opacity focus-within:opacity-100 group-hover:opacity-100">
-            <flux:button wire:click="toggleWatched" size="xs" variant="subtle">
-                {{ $video->isWatched() ? __('Mark unwatched') : __('Mark watched') }}
-            </flux:button>
-
-            <flux:button wire:click="hide" size="xs" variant="subtle" icon="x-mark" title="{{ __('Hide from feed') }}" />
+            <flux:text size="sm" class="truncate">
+                {{ $video->channel->display_name }}
+                · {{ $video->published_at->diffForHumans() }}
+                @if ($video->isWatched())
+                    · {{ __('watched') }}
+                @elseif ($video->isResumable())
+                    · {{ __('stopped at') }} <span class="tabular-nums">{{ $video->resume_for_humans }}</span>
+                @endif
+            </flux:text>
         </div>
     </div>
 </article>

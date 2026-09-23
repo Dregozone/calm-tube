@@ -338,6 +338,51 @@ it('redirects a guest to the login page', function (): void {
     $this->get(route('channels.index'))->assertRedirect(route('login'));
 });
 
+describe('finishing early from the channel list', function (): void {
+    it('saves how long the channel outro plug runs', function (): void {
+        $channel = calmChannel();
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('outroSeconds', '15')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        expect($channel->fresh()->outro_seconds)->toBe(15);
+    });
+
+    it('loads the outro already set', function (): void {
+        $channel = calmChannel(['outro_seconds' => 20]);
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->assertSet('outroSeconds', '20');
+    });
+
+    it('goes back to watching to the end when emptied', function (): void {
+        $channel = calmChannel(['outro_seconds' => 20]);
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('outroSeconds', '')
+            ->call('save');
+
+        expect($channel->fresh()->outro_seconds)->toBeNull();
+    });
+
+    it('refuses an outro that is not a sensible number of seconds', function (string $seconds): void {
+        $channel = calmChannel();
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('outroSeconds', $seconds)
+            ->call('save')
+            ->assertHasErrors('outroSeconds');
+
+        expect($channel->fresh()->outro_seconds)->toBeNull();
+    })->with(['zero' => '0', 'too long' => '121', 'not a number' => 'soon']);
+});
+
 describe('playback speed from the channel list', function (): void {
     it('saves a speed for every video from the channel', function (): void {
         $channel = calmChannel();
