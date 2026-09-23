@@ -26,6 +26,9 @@ new #[Title('Feed')] class extends Component
 
     public ?string $status = null;
 
+    /** Video ids the last bulk action touched, so it can be undone. */
+    public array $undoable = [];
+
     /**
      * Opened without filters in the URL, the feed picks up where you left off.
      * Coming back from a video is the case that matters: watch something with
@@ -35,7 +38,10 @@ new #[Title('Feed')] class extends Component
     public function mount(): void
     {
         if (! request()->has('filter')) {
-            $this->filter = (string) session('calm-tube.feed.filter', 'all');
+            $this->filter = (string) session(
+                'calm-tube.feed.filter',
+                (string) config('calm-tube.feed.default_filter'),
+            );
         }
 
         if (! request()->has('channel')) {
@@ -63,8 +69,64 @@ new #[Title('Feed')] class extends Component
         // Re-renders so a hidden video leaves the grid.
     }
 
+    /**
+     * Clears the page in front of you rather than the whole backlog.
+     *
+     * A page is a decision you can see the whole of, which the 771 videos
+     * behind it is not. Undo is offered because the only thing worse than a
+     * chore is a chore you cannot take back.
+     */
+    public function markPageWatched(): void
+    {
+        $ids = $this->videos()->getCollection()
+            ->filter(fn (Video $video): bool => ! $video->isWatched())
+            ->pluck('id')
+            ->all();
+
+        $this->markWatched($ids);
+
+        $this->status = $ids === []
+            ? __('Everything on this page was already watched.')
+            : count($ids).' '.(count($ids) === 1 ? __('video') : __('videos')).' '.__('marked as watched.');
+    }
+
+    /**
+     * @param  list<int>  $ids
+     */
+    private function markWatched(array $ids): void
+    {
+        if ($ids === []) {
+            $this->undoable = [];
+
+            return;
+        }
+
+        Video::query()->whereKey($ids)->update([
+            'watched_at' => now(),
+            'resume_seconds' => null,
+        ]);
+
+        $this->undoable = $ids;
+        $this->resetPage();
+    }
+
+    public function undoBulk(): void
+    {
+        if ($this->undoable === []) {
+            return;
+        }
+
+        Video::query()->whereKey($this->undoable)->update(['watched_at' => null]);
+
+        $this->status = count($this->undoable).' '.
+            (count($this->undoable) === 1 ? __('video') : __('videos')).' '.__('put back.');
+        $this->undoable = [];
+        $this->resetPage();
+    }
+
     public function refreshAll(): void
     {
+        $this->undoable = [];
         $channels = Channel::query()->enabled()->get();
         $new = 0;
         $failed = 0;
@@ -101,6 +163,9 @@ new #[Title('Feed')] class extends Component
             'videos' => $this->videos(),
             'channels' => Channel::query()->enabled()->orderBy('title')->get(),
             'followsNothing' => Channel::query()->count() === 0,
+            // "All caught up" is only true if there was anything to catch up
+            // on. An empty library needs a refresh, not congratulations.
+            'hasVideos' => Video::query()->inFeed()->exists(),
             'lastRefreshedAt' => Channel::query()->max('last_refreshed_at'),
             'missingApiKey' => config('calm-tube.api_key') === null,
         ];
@@ -153,7 +218,17 @@ new #[Title('Feed')] class extends Component
     </div>
 
     @if ($status)
-        <flux:callout variant="secondary" class="mt-4">{{ $status }}</flux:callout>
+        <flux:callout variant="secondary" class="mt-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <span>{{ $status }}</span>
+
+                @if ($undoable !== [])
+                    <flux:button wire:click="undoBulk" size="xs" variant="subtle">
+                        {{ __('Undo') }}
+                    </flux:button>
+                @endif
+            </div>
+        </flux:callout>
     @endif
 
     @if ($missingApiKey)
@@ -178,6 +253,17 @@ new #[Title('Feed')] class extends Component
                     </flux:select.option>
                 @endforeach
             </flux:select>
+
+            <flux:button
+                wire:click="markPageWatched"
+                wire:confirm="{{ __('Mark every video on this page as watched?') }}"
+                size="sm"
+                variant="subtle"
+                icon="check"
+                class="sm:ms-auto"
+            >
+                {{ __('Mark page watched') }}
+            </flux:button>
         </div>
     @endunless
 
@@ -193,7 +279,7 @@ new #[Title('Feed')] class extends Component
                 {{ __('Add a channel') }}
             </flux:button>
         </div>
-    @elseif ($videos->isEmpty() && $filter === 'unwatched')
+    @elseif ($videos->isEmpty() && $filter === 'unwatched' && $hasVideos)
         <div class="mt-16 text-center">
             <flux:heading size="lg">{{ __("You're all caught up.") }}</flux:heading>
 

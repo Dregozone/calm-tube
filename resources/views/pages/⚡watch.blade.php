@@ -28,12 +28,39 @@ new #[Title('Watch')] class extends Component
             return;
         }
 
-        $this->video->forceFill(['watched_at' => now()])->save();
+        // Finished, so there is nothing left to resume.
+        $this->video->forceFill(['watched_at' => now(), 'resume_seconds' => null])->save();
     }
 
     public function markUnwatched(): void
     {
-        $this->video->forceFill(['watched_at' => null])->save();
+        $this->video->forceFill(['watched_at' => null, 'resume_seconds' => null])->save();
+    }
+
+    /**
+     * The embedded player forgets where you were between visits, so the
+     * position is written here every few seconds while it plays.
+     *
+     * Renders nothing: the page is already showing the video, and a re-render
+     * every few seconds for a number nothing on screen reads would be waste.
+     */
+    public function saveProgress(int $seconds): void
+    {
+        $this->skipRender();
+
+        if ($seconds < 0) {
+            return;
+        }
+
+        $this->video->forceFill(['resume_seconds' => $seconds])->save();
+    }
+
+    /**
+     * Back to the beginning, and stay there.
+     */
+    public function clearProgress(): void
+    {
+        $this->video->forceFill(['resume_seconds' => null])->save();
     }
 
     public function toggleWatched(): void
@@ -167,6 +194,7 @@ new #[Title('Watch')] class extends Component
                 data-playback-rate="{{ $this->video->channel->effective_playback_rate }}"
                 data-countdown-seconds="{{ config('calm-tube.player.countdown_seconds') }}"
                 data-mask-seconds="{{ config('calm-tube.player.end_card_mask_seconds') }}"
+                data-resume-seconds="{{ $this->video->isResumable() ? $this->video->resume_seconds : 0 }}"
             >
                 <iframe
                     id="calm-player"
@@ -177,6 +205,32 @@ new #[Title('Watch')] class extends Component
                     allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                     allowfullscreen
                 ></iframe>
+
+                {{-- Offered, never applied behind your back: a video that
+                     silently starts in the middle feels broken, and sometimes
+                     you did mean to watch it again from the top. --}}
+                @if ($this->video->isResumable())
+                    <div
+                        id="calm-resume"
+                        class="absolute inset-x-0 bottom-0 z-20 flex flex-wrap items-center justify-center gap-3 bg-zinc-950/90 p-4 text-center"
+                        data-resume-label="{{ $this->video->resume_for_humans }}"
+                    >
+                        <flux:text class="text-white">
+                            {{ __('You stopped at') }}
+                            <span class="tabular-nums">{{ $this->video->resume_for_humans }}</span>.
+                        </flux:text>
+
+                        <div class="flex items-center gap-2">
+                            <flux:button id="calm-resume-go" variant="primary" size="sm">
+                                {{ __('Resume') }}
+                            </flux:button>
+
+                            <flux:button id="calm-resume-restart" variant="subtle" size="sm" class="!text-white">
+                                {{ __('Start again') }}
+                            </flux:button>
+                        </div>
+                    </div>
+                @endif
 
                 {{-- Transparent, and only for the last seconds of the video:
                      it covers the end cards YouTube draws over the picture,
@@ -312,16 +366,20 @@ new #[Title('Watch')] class extends Component
             </flux:text>
         @endif
 
+        {{-- Closed until asked for. A description is mostly links out —
+             sponsors, socials, the author's other videos — and none of that
+             should be in front of you while you are deciding what to watch. --}}
         @if ($this->video->description)
             <div x-data="{ expanded: false }" class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
-                <div
-                    class="whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-300"
-                    :class="expanded || 'line-clamp-6'"
-                >{!! $this->description() !!}</div>
-
-                <flux:button x-on:click="expanded = ! expanded" size="xs" variant="subtle" class="mt-2">
-                    <span x-text="expanded ? '{{ __('Show less') }}' : '{{ __('Show more') }}'">{{ __('Show more') }}</span>
+                <flux:button x-on:click="expanded = ! expanded" size="xs" variant="subtle">
+                    <span x-text="expanded ? '{{ __('Hide description') }}' : '{{ __('Show description') }}'">{{ __('Show description') }}</span>
                 </flux:button>
+
+                <div
+                    x-show="expanded"
+                    x-cloak
+                    class="mt-4 whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-300"
+                >{!! $this->description() !!}</div>
             </div>
         @endif
     </div>
@@ -379,8 +437,11 @@ new #[Title('Watch')] class extends Component
         const returnUrl = stage.dataset.returnUrl;
         const total = Number(stage.dataset.countdownSeconds || 5);
         const maskFrom = Number(stage.dataset.maskSeconds || 0);
+        const resumeAt = Number(stage.dataset.resumeSeconds || 0);
+        const resumePanel = document.getElementById('calm-resume');
         let rate = Number(stage.dataset.playbackRate || 1);
         let watching = null;
+        let recording = null;
 
         let countdown = null;
 
@@ -458,6 +519,25 @@ new #[Title('Watch')] class extends Component
                 conceal(mask);
             };
 
+            // Ten seconds is the most this can cost you, and it is the same
+            // write every time, so it stays one row rather than a history.
+            const recordProgress = () => {
+                clearInterval(recording);
+
+                recording = setInterval(() => {
+                    $wire.saveProgress(Math.floor(player.getCurrentTime()));
+                }, 10000);
+            };
+
+            const stopRecording = (save = true) => {
+                clearInterval(recording);
+                recording = null;
+
+                if (save) {
+                    $wire.saveProgress(Math.floor(player.getCurrentTime()));
+                }
+            };
+
             const applyRate = () => {
                 if (rate !== 1) {
                     player.setPlaybackRate(rate);
@@ -470,8 +550,10 @@ new #[Title('Watch')] class extends Component
                     onStateChange(event) {
                         if (event.data === YT.PlayerState.PLAYING) {
                             conceal(ended);
+                            conceal(resumePanel);
                             stopCountdown();
                             watchForEndCards();
+                            recordProgress();
                             // YouTube resets the rate when a video actually
                             // starts, so asking once on ready is not enough.
                             applyRate();
@@ -481,6 +563,7 @@ new #[Title('Watch')] class extends Component
                             // Paused inside the masked stretch, the picture
                             // should be yours to look at.
                             stopWatching();
+                            stopRecording();
                         }
 
                         if (event.data === YT.PlayerState.ENDED) {
@@ -490,6 +573,9 @@ new #[Title('Watch')] class extends Component
                             }
 
                             stopWatching();
+                            // markWatched clears the resume point, so this
+                            // must not write one back after it.
+                            stopRecording(false);
                             reveal(ended);
                             $wire.markWatched();
                             startCountdown();
@@ -504,6 +590,7 @@ new #[Title('Watch')] class extends Component
 
                         stopCountdown();
                         stopWatching();
+                        stopRecording(false);
                         reveal(errored);
                     },
                 },
@@ -520,9 +607,26 @@ new #[Title('Watch')] class extends Component
             // not take that away, only the end cards underneath it.
             mask?.addEventListener('click', () => player.pauseVideo());
 
+            document.getElementById('calm-resume-go')?.addEventListener('click', () => {
+                conceal(resumePanel);
+                player.seekTo(resumeAt, true);
+                player.playVideo();
+            });
+
+            document.getElementById('calm-resume-restart')?.addEventListener('click', () => {
+                conceal(resumePanel);
+                $wire.clearProgress();
+                player.seekTo(0, true);
+                player.playVideo();
+            });
+
+            // Closing the tab mid-video is the ordinary way to leave one.
+            window.addEventListener('pagehide', () => stopRecording());
+
             document.getElementById('calm-replay')?.addEventListener('click', () => {
                 stopCountdown();
                 conceal(ended);
+                $wire.clearProgress();
                 player.seekTo(0);
                 player.playVideo();
             });

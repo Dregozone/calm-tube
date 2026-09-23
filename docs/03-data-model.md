@@ -49,6 +49,7 @@ directly.
 | `description` | text | yes | null | Archived at first ingest. Never updated |
 | `published_at` | timestamp | no | — | From the feed's `<published>` |
 | `duration_seconds` | integer | yes | null | Null = unknown (no API key, quota, or live) |
+| `resume_seconds` | integer | yes | null | How far in you got; null means not started, or finished |
 | `thumbnail_url` | string | yes | null | Source URL; fallback when no local file |
 | `thumbnail_path` | string | yes | null | Archived file, relative to the configured disk |
 | `is_short` | boolean | yes | null | Null = not yet determined. Once set, never re-checked |
@@ -234,6 +235,7 @@ Schema::create('videos', function (Blueprint $table): void {
     $table->text('description')->nullable();
     $table->timestamp('published_at');
     $table->unsignedInteger('duration_seconds')->nullable();
+    $table->unsignedInteger('resume_seconds')->nullable();
     $table->string('thumbnail_url')->nullable();
     $table->string('thumbnail_path')->nullable();
     $table->boolean('is_short')->nullable();

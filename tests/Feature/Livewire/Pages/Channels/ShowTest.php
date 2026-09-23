@@ -120,3 +120,74 @@ it('redirects a guest to the login page', function (): void {
 
     $this->get(route('channels.show', $channel))->assertRedirect(route('login'));
 });
+
+describe('clearing a channel', function (): void {
+    it('marks every unwatched video from the channel in one action', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(6)->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])->call('markAllWatched');
+
+        expect($channel->videos()->whereNull('watched_at')->count())->toBe(0);
+    });
+
+    it('reaches past the page you can see', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(30)->create();
+
+        // The feed clears a page; a channel is a decision about the whole of
+        // it, so all thirty go, not the twenty-four on screen.
+        Livewire::test('pages::channels.show', ['channel' => $channel])->call('markAllWatched');
+
+        expect($channel->videos()->whereNull('watched_at')->count())->toBe(0);
+    });
+
+    it('leaves other channels alone', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(2)->create();
+        $theirs = Video::factory()->for(Channel::factory())->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])->call('markAllWatched');
+
+        expect($theirs->fresh()->watched_at)->toBeNull();
+    });
+
+    it('can be taken back', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(4)->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])
+            ->call('markAllWatched')
+            ->call('undoBulk');
+
+        expect($channel->videos()->whereNull('watched_at')->count())->toBe(4);
+    });
+
+    it('deletes nothing and hides nothing', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(3)->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])->call('markAllWatched');
+
+        expect($channel->videos()->count())->toBe(3)
+            ->and($channel->videos()->whereNotNull('hidden_at')->count())->toBe(0);
+    });
+
+    it('says so when there was nothing unwatched', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->watched()->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])
+            ->call('markAllWatched')
+            ->assertSee('Nothing here was unwatched');
+    });
+
+    it('updates the count in the header', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(3)->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])
+            ->call('markAllWatched')
+            ->assertSee('0 unwatched');
+    });
+});

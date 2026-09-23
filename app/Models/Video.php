@@ -30,6 +30,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $thumbnail_path
  * @property CarbonImmutable $published_at
  * @property int|null $duration_seconds
+ * @property int|null $resume_seconds
  * @property bool|null $is_short
  * @property LiveStatus $live_status
  * @property CarbonImmutable|null $scheduled_start_at
@@ -40,6 +41,8 @@ use Illuminate\Support\Facades\Storage;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read string|null $duration_for_humans
+ * @property-read string|null $resume_for_humans
+ * @property-read int<0, 100>|null $percent_watched
  * @property-read Channel $channel
  */
 #[Fillable([
@@ -51,6 +54,7 @@ use Illuminate\Support\Facades\Storage;
     'thumbnail_path',
     'published_at',
     'duration_seconds',
+    'resume_seconds',
     'is_short',
     'live_status',
     'scheduled_start_at',
@@ -63,6 +67,12 @@ class Video extends Model
 {
     /** @use HasFactory<VideoFactory> */
     use HasFactory;
+
+    /** Below this, you may as well start again. */
+    private const int RESUME_FLOOR = 15;
+
+    /** Within this of the end, there is nothing left to resume. */
+    private const int RESUME_CEILING = 15;
 
     protected static function booted(): void
     {
@@ -164,6 +174,56 @@ class Video extends Model
         return Attribute::get(
             fn (): ?string => app(DurationParser::class)->toHuman($this->duration_seconds)
         );
+    }
+
+    /**
+     * Where you got to, as a timestamp you can read back.
+     *
+     * @return Attribute<string|null, never>
+     */
+    protected function resumeForHumans(): Attribute
+    {
+        return Attribute::get(
+            fn (): ?string => app(DurationParser::class)->toHuman($this->resume_seconds)
+        );
+    }
+
+    /**
+     * How far through the video you are, for the bar across the thumbnail.
+     *
+     * Clamped to its track: the player reports a fraction past the duration
+     * YouTube gave us often enough to matter, and a bar wider than its track,
+     * or narrower than nothing, looks broken.
+     *
+     * @return Attribute<int<0, 100>|null, never>
+     */
+    protected function percentWatched(): Attribute
+    {
+        return Attribute::get(function (): ?int {
+            if ($this->resume_seconds === null || $this->duration_seconds === null) {
+                return null;
+            }
+
+            if ($this->duration_seconds === 0) {
+                return null;
+            }
+
+            return max(0, min(100, (int) round($this->resume_seconds / $this->duration_seconds * 100)));
+        });
+    }
+
+    /**
+     * Far enough in that picking up where you left off beats starting again,
+     * and not so near the end that there is nothing left to watch.
+     */
+    public function isResumable(): bool
+    {
+        if ($this->resume_seconds === null || $this->resume_seconds < self::RESUME_FLOOR) {
+            return false;
+        }
+
+        return $this->duration_seconds === null
+            || $this->resume_seconds < $this->duration_seconds - self::RESUME_CEILING;
     }
 
     /**

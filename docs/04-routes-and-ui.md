@@ -223,9 +223,11 @@ handed to a player that would reject it anyway.
 **Title** is the archived one — the same string you saw on the card, regardless of what the
 video is called on YouTube today.
 
-**Description** is rendered with `e()` then a linkifier that wraps bare URLs in
-`<a target="_blank" rel="noopener noreferrer">`. Newlines preserved with `whitespace-pre-line`.
-Collapsed to ~6 lines with a "Show more" toggle when long. Timestamps like `04:12` are left as
+**Description** starts closed behind a "Show description" toggle. A description is mostly
+links out — sponsors, socials, the author's other videos — and none of that should be in front
+of you while you are deciding what to watch. Opened, it is rendered with `e()` then a linkifier
+that wraps bare URLs in `<a target="_blank" rel="noopener noreferrer">`, newlines preserved with
+`whitespace-pre-line`. Timestamps like `04:12` are left as
 plain text in Phase 7 (making them seek the player is parked in open questions).
 
 **"Open on YouTube"** links to `https://www.youtube.com/watch?v={id}`, `target="_blank"`,
@@ -259,6 +261,23 @@ server-rendered `hidden` and the countdown runs invisibly to its end. That is no
   autoplay** — you click, or you don't.
 - "Replay" calls `player.seekTo(0)` and hides the overlay.
 - Marking watched happens via `$wire.markWatched()`, so a page reload shows the new state.
+
+### Resuming
+
+The embedded player forgets where you were between visits, so the position is written to
+`videos.resume_seconds` every ten seconds while the video plays, on pause, and on `pagehide`.
+`saveProgress()` calls `skipRender()`: a round trip every ten seconds is cheap, re-rendering
+the page around it is not.
+
+Reopening a part-watched video **offers** to resume rather than seeking behind your back — a
+video that silently starts in the middle feels broken, and sometimes you did mean to start
+again. Below fifteen seconds in, or within fifteen seconds of the end, there is nothing worth
+resuming and the prompt does not appear.
+
+Finishing, replaying, starting again, and marking watched or unwatched all clear the position.
+
+On a card it shows as a thin bar across the bottom of the thumbnail and a "stopped at 18:42"
+line. No percentage and no label: it is a record of where you got to, not a nudge to go back.
 
 ### The end-card mask
 

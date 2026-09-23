@@ -235,7 +235,12 @@ new #[Title('Channels')] class extends Component
     {
         return [
             'channels' => Channel::query()
-                ->withCount('videos')
+                ->withCount([
+                    'videos',
+                    // Counted the way the feed counts, so the number on the
+                    // row is the number of cards you would actually see.
+                    'videos as unwatched_count' => fn ($query) => $query->viewable()->unwatched(),
+                ])
                 ->orderBy('title')
                 ->get(),
         ];
@@ -307,7 +312,13 @@ new #[Title('Channels')] class extends Component
                         </a>
 
                         <flux:text size="sm" class="truncate">
-                            {{ $channel->videos_count }} {{ Str::plural('video', $channel->videos_count) }}
+                            @if ($channel->unwatched_count > 0)
+                                {{ $channel->unwatched_count.' '.__('unwatched') }}
+                                · {{ $channel->videos_count }} {{ Str::plural('video', $channel->videos_count) }}
+                            @else
+                                {{ __('all caught up') }}
+                                · {{ $channel->videos_count }} {{ Str::plural('video', $channel->videos_count) }}
+                            @endif
                             @if ($channel->handle)
                                 · {{ $channel->handle }}
                             @endif

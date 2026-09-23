@@ -64,3 +64,9 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/* Alpine hides these until it has initialised, so a collapsed description
+   does not flash open on load. */
+[x-cloak] {
+    display: none !important;
+}

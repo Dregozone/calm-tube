@@ -408,3 +408,30 @@ describe('the delete confirmation', function (): void {
             ->assertDontSee('Disable instead');
     });
 });
+
+describe('unwatched counts', function (): void {
+    it('shows how much of each channel is still waiting', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(3)->create();
+        Video::factory()->for($channel)->watched()->create();
+
+        Livewire::test('pages::channels.index')->assertSee('3 unwatched');
+    });
+
+    it('counts the way the feed counts, so the number matches the cards', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->create();
+        Video::factory()->for($channel)->short()->count(4)->create();
+
+        Livewire::test('pages::channels.index')->assertSee('1 unwatched');
+    });
+
+    it('says you are caught up rather than showing a zero', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->watched()->count(2)->create();
+
+        Livewire::test('pages::channels.index')
+            ->assertSee('all caught up')
+            ->assertDontSee('0 unwatched');
+    });
+});

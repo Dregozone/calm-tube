@@ -25,6 +25,9 @@ new class extends Component
 
     public ?string $status = null;
 
+    /** Video ids the last bulk action touched, so it can be undone. */
+    public array $undoable = [];
+
     public function updated(): void
     {
         $this->resetPage();
@@ -53,12 +56,60 @@ new class extends Component
 
         $this->channel->refresh();
 
+        $this->undoable = [];
+
         $this->status = $result->isFailed()
             ? $result->errorMessage
             : ($result->newVideos === 0
                 ? __('No new videos.')
                 : $result->newVideos.' '.__('new').' '.($result->newVideos === 1 ? __('video') : __('videos')).'.');
 
+        $this->resetPage();
+    }
+
+    /**
+     * Declares a channel finished with, in one action rather than fifty.
+     *
+     * Nothing is deleted and nothing is hidden: these are still your archive,
+     * still searchable through the channel page, just no longer waiting.
+     */
+    public function markAllWatched(): void
+    {
+        $ids = $this->archive()->unwatched()->pluck('id')->all();
+
+        if ($ids === []) {
+            $this->status = __('Nothing here was unwatched.');
+            $this->undoable = [];
+
+            return;
+        }
+
+        Video::query()->whereKey($ids)->update([
+            'watched_at' => now(),
+            'resume_seconds' => null,
+        ]);
+
+        $this->undoable = $ids;
+        $this->status = count($ids).' '.
+            (count($ids) === 1 ? __('video') : __('videos')).' '.__('marked as watched.');
+
+        unset($this->unwatchedCount);
+        $this->resetPage();
+    }
+
+    public function undoBulk(): void
+    {
+        if ($this->undoable === []) {
+            return;
+        }
+
+        Video::query()->whereKey($this->undoable)->update(['watched_at' => null]);
+
+        $this->status = count($this->undoable).' '.
+            (count($this->undoable) === 1 ? __('video') : __('videos')).' '.__('put back.');
+        $this->undoable = [];
+
+        unset($this->unwatchedCount);
         $this->resetPage();
     }
 
@@ -166,7 +217,17 @@ new class extends Component
     </div>
 
     @if ($status)
-        <flux:callout variant="secondary" class="mt-4">{{ $status }}</flux:callout>
+        <flux:callout variant="secondary" class="mt-4">
+            <div class="flex flex-wrap items-center gap-3">
+                <span>{{ $status }}</span>
+
+                @if ($undoable !== [])
+                    <flux:button wire:click="undoBulk" size="xs" variant="subtle">
+                        {{ __('Undo') }}
+                    </flux:button>
+                @endif
+            </div>
+        </flux:callout>
     @endif
 
     @if ($channel->hasRefreshError())
@@ -181,10 +242,24 @@ new class extends Component
 
     @if ($this->total > 0)
         <div class="mt-6">
-            <flux:radio.group wire:model.live="filter" variant="segmented" size="sm">
-                <flux:radio value="all">{{ __('All') }}</flux:radio>
-                <flux:radio value="unwatched">{{ __('Unwatched') }}</flux:radio>
-            </flux:radio.group>
+            <div class="flex flex-wrap items-center gap-3">
+                <flux:radio.group wire:model.live="filter" variant="segmented" size="sm">
+                    <flux:radio value="all">{{ __('All') }}</flux:radio>
+                    <flux:radio value="unwatched">{{ __('Unwatched') }}</flux:radio>
+                </flux:radio.group>
+
+                @if ($this->unwatchedCount > 0)
+                    <flux:button
+                        wire:click="markAllWatched"
+                        wire:confirm="{{ __('Mark all :count videos from this channel as watched?', ['count' => $this->unwatchedCount]) }}"
+                        size="sm"
+                        variant="subtle"
+                        icon="check"
+                    >
+                        {{ __('Mark all as watched') }}
+                    </flux:button>
+                @endif
+            </div>
         </div>
     @endif
 

@@ -396,3 +396,86 @@ describe('the end-card mask', function (): void {
         $this->get(route('videos.watch', $video))->assertSee('data-mask-seconds="0"', escape: false);
     });
 });
+
+describe('picking up where you left off', function (): void {
+    it('offers to resume rather than silently starting in the middle', function (): void {
+        $video = watchable(['resume_seconds' => 1122, 'duration_seconds' => 2400]);
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('You stopped at')
+            ->assertSee('18:42')
+            ->assertSee('Start again')
+            ->assertSee('data-resume-seconds="1122"', escape: false);
+    });
+
+    it('says nothing about resuming a video you have not started', function (): void {
+        $video = watchable(['resume_seconds' => null]);
+
+        $this->get(route('videos.watch', $video))
+            ->assertDontSee('You stopped at')
+            ->assertSee('data-resume-seconds="0"', escape: false);
+    });
+
+    it('stores the position the player reports', function (): void {
+        $video = watchable();
+
+        Livewire::test('pages::watch', ['video' => $video])->call('saveProgress', 742);
+
+        expect($video->fresh()->resume_seconds)->toBe(742);
+    });
+
+    it('ignores a nonsense position', function (): void {
+        $video = watchable(['resume_seconds' => 300]);
+
+        Livewire::test('pages::watch', ['video' => $video])->call('saveProgress', -5);
+
+        expect($video->fresh()->resume_seconds)->toBe(300);
+    });
+
+    it('does not re-render for a number nothing on screen reads', function (): void {
+        $video = watchable();
+
+        // A round trip every ten seconds is cheap; re-rendering the page
+        // around it is not.
+        Livewire::test('pages::watch', ['video' => $video])
+            ->call('saveProgress', 100)
+            ->assertOk();
+
+        expect($video->fresh()->resume_seconds)->toBe(100);
+    });
+
+    it('forgets the position when the video is finished', function (): void {
+        $video = watchable(['resume_seconds' => 2000]);
+
+        Livewire::test('pages::watch', ['video' => $video])->call('markWatched');
+
+        expect($video->fresh()->resume_seconds)->toBeNull()
+            ->and($video->fresh()->watched_at)->not->toBeNull();
+    });
+
+    it('forgets the position when you start again', function (): void {
+        $video = watchable(['resume_seconds' => 2000]);
+
+        Livewire::test('pages::watch', ['video' => $video])->call('clearProgress');
+
+        expect($video->fresh()->resume_seconds)->toBeNull();
+    });
+
+    it('forgets the position when you mark it unwatched', function (): void {
+        $video = watchable(['resume_seconds' => 2000, 'watched_at' => now()]);
+
+        Livewire::test('pages::watch', ['video' => $video])->call('markUnwatched');
+
+        expect($video->fresh()->resume_seconds)->toBeNull();
+    });
+});
+
+describe('the description', function (): void {
+    it('starts closed, so the links out are not in front of you', function (): void {
+        $video = watchable(['description' => 'Sponsored by something https://example.com/buy']);
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('Show description')
+            ->assertSee('x-cloak', escape: false);
+    });
+});

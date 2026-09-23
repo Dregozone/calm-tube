@@ -34,6 +34,7 @@ class VideoFactory extends Factory
             'is_short' => false,
             'live_status' => LiveStatus::None,
             'scheduled_start_at' => null,
+            'resume_seconds' => null,
             'watched_at' => null,
             'hidden_at' => null,
             'unavailable_at' => null,
@@ -43,7 +44,18 @@ class VideoFactory extends Factory
 
     public function watched(): static
     {
-        return $this->state(fn (): array => ['watched_at' => now()->subDay()]);
+        return $this->state(fn (): array => ['watched_at' => now()->subDay(), 'resume_seconds' => null]);
+    }
+
+    /**
+     * Started but not finished, so the watch page offers to pick it up.
+     */
+    public function partlyWatched(int $seconds = 600): static
+    {
+        return $this->state(fn (): array => [
+            'resume_seconds' => $seconds,
+            'watched_at' => null,
+        ]);
     }
 
     public function hidden(): static

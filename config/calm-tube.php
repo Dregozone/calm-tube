@@ -124,6 +124,10 @@ return [
 
     'feed' => [
         'per_page' => 24,
+
+        // A fresh session opens on what you have not seen rather than on the
+        // whole archive. Whichever you last chose is remembered after that.
+        'default_filter' => 'unwatched',
     ],
 
 ];

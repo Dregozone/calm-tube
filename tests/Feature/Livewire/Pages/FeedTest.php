@@ -245,3 +245,98 @@ describe('remembering the filter', function (): void {
         expect(session('calm-tube.feed.channel'))->toBe($channel->youtube_channel_id);
     });
 });
+
+describe('clearing a page', function (): void {
+    it('marks everything on the page as watched in one action', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(5)->create();
+
+        Livewire::test('pages::feed')->call('markPageWatched');
+
+        expect(Video::query()->whereNull('watched_at')->count())->toBe(0);
+    });
+
+    it('only touches the page in front of you', function (): void {
+        $channel = calmChannel();
+        config()->set('calm-tube.feed.per_page', 3);
+        Video::factory()->for($channel)->count(8)->create();
+
+        Livewire::test('pages::feed')->call('markPageWatched');
+
+        expect(Video::query()->whereNull('watched_at')->count())->toBe(5);
+    });
+
+    it('can be taken back', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->count(4)->create();
+
+        Livewire::test('pages::feed')
+            ->call('markPageWatched')
+            ->call('undoBulk');
+
+        expect(Video::query()->whereNull('watched_at')->count())->toBe(4);
+    });
+
+    it('puts back only what it marked, never what you had already watched', function (): void {
+        $channel = calmChannel();
+        $already = Video::factory()->for($channel)->watched()->create();
+        Video::factory()->for($channel)->count(2)->create();
+
+        Livewire::test('pages::feed')
+            ->call('markPageWatched')
+            ->call('undoBulk');
+
+        expect($already->fresh()->watched_at)->not->toBeNull()
+            ->and(Video::query()->whereNull('watched_at')->count())->toBe(2);
+    });
+
+    it('clears any position stored in the videos it marks', function (): void {
+        $video = Video::factory()->for(calmChannel())->partlyWatched()->create();
+
+        Livewire::test('pages::feed')->call('markPageWatched');
+
+        expect($video->fresh()->resume_seconds)->toBeNull();
+    });
+
+    it('says so when there was nothing to clear', function (): void {
+        Video::factory()->for(calmChannel())->watched()->count(2)->create();
+
+        Livewire::test('pages::feed')
+            ->set('filter', 'all')
+            ->call('markPageWatched')
+            ->assertSee('already watched');
+    });
+
+    it('reports how many it marked', function (): void {
+        Video::factory()->for(calmChannel())->count(3)->create();
+
+        Livewire::test('pages::feed')->call('markPageWatched')->assertSee('3 videos marked as watched');
+    });
+});
+
+describe('the default filter', function (): void {
+    it('opens on what you have not seen', function (): void {
+        Livewire::test('pages::feed')->assertSet('filter', 'unwatched');
+    });
+
+    it('takes the default from configuration', function (): void {
+        config()->set('calm-tube.feed.default_filter', 'all');
+
+        Livewire::test('pages::feed')->assertSet('filter', 'all');
+    });
+
+    it('still prefers whatever you last chose', function (): void {
+        session()->put('calm-tube.feed.filter', 'all');
+
+        Livewire::test('pages::feed')->assertSet('filter', 'all');
+    });
+
+    it('asks you to refresh rather than congratulating you on an empty library', function (): void {
+        calmChannel();
+
+        // "All caught up" is only true if there was anything to catch up on.
+        Livewire::test('pages::feed')
+            ->assertSee('No videos yet')
+            ->assertDontSee('all caught up');
+    });
+});

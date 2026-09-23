@@ -39,6 +39,17 @@ new class extends Component
                     {{ $video->duration_for_humans }}
                 </span>
             @endif
+
+            {{-- A record of where you got to, not a nudge to go back: no
+                 label, no percentage, just the width of the bar. --}}
+            @if ($video->percent_watched !== null && ! $video->isWatched())
+                <div class="absolute inset-x-0 bottom-0 h-1 bg-black/40">
+                    <div
+                        class="h-full bg-red-500"
+                        style="width: {{ $video->percent_watched }}%"
+                    ></div>
+                </div>
+            @endif
         </div>
     </a>
 
@@ -62,6 +73,8 @@ new class extends Component
             {{ $video->published_at->diffForHumans() }}
             @if ($video->isWatched())
                 · {{ __('watched') }}
+            @elseif ($video->isResumable())
+                · {{ __('stopped at') }} <span class="tabular-nums">{{ $video->resume_for_humans }}</span>
             @endif
         </flux:text>
 

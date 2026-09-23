@@ -106,6 +106,23 @@ and speed is not the goal.
 
 ---
 
+## Working through a backlog
+
+The feed opens on **Unwatched**, and remembers whichever you last chose after that.
+
+Two bulk actions, because clearing fifty videos one at a time is not a feature:
+
+- **Mark page watched** on the feed — clears the twenty-four in front of you.
+- **Mark all as watched** on a channel page — clears that channel entirely.
+
+Both offer **Undo**, and neither deletes or hides anything. The videos stay in your archive,
+still reachable from the channel page; they just stop waiting for you.
+
+Long videos remember where you stopped. Reopening one offers "Resume from 18:42" rather than
+seeking there on its own, and the card shows a thin bar across the thumbnail.
+
+---
+
 ## Development
 
 ```bash
