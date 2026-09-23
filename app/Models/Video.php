@@ -36,6 +36,7 @@ use Illuminate\Support\Facades\Storage;
  * @property CarbonImmutable|null $scheduled_start_at
  * @property CarbonImmutable|null $watched_at
  * @property CarbonImmutable|null $hidden_at
+ * @property CarbonImmutable|null $sampled_out_at
  * @property CarbonImmutable|null $unavailable_at
  * @property CarbonImmutable|null $enriched_at
  * @property CarbonImmutable|null $created_at
@@ -60,6 +61,7 @@ use Illuminate\Support\Facades\Storage;
     'scheduled_start_at',
     'watched_at',
     'hidden_at',
+    'sampled_out_at',
     'unavailable_at',
     'enriched_at',
 ])]
@@ -137,8 +139,26 @@ class Video extends Model
     public function scopeInFeed(Builder $query): void
     {
         $query->viewable()
+            // Set aside by a channel's sample limit. Deliberately not part of
+            // viewable(): the channel page must still show what it holds.
+            ->whereNull('sampled_out_at')
             ->whereHas('channel', fn (Builder $channelQuery): Builder => $channelQuery
                 ->where('is_enabled', true));
+    }
+
+    /**
+     * Held back from the feed by the channel's sample limit.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeSetAside(Builder $query): void
+    {
+        $query->whereNotNull('sampled_out_at');
+    }
+
+    public function isSetAside(): bool
+    {
+        return $this->sampled_out_at !== null;
     }
 
     /**
@@ -236,6 +256,7 @@ class Video extends Model
             'scheduled_start_at' => 'datetime',
             'watched_at' => 'datetime',
             'hidden_at' => 'datetime',
+            'sampled_out_at' => 'datetime',
             'unavailable_at' => 'datetime',
             'enriched_at' => 'datetime',
             'duration_seconds' => 'integer',

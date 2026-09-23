@@ -83,6 +83,7 @@ a 10,000 unit allowance.
 | `php artisan calm:backfill` | Recover older uploads the RSS window can no longer reach |
 | `php artisan calm:enrich` | Fill in durations and live status for videos still missing them |
 | `php artisan calm:archive` | Download thumbnails and avatars not yet stored locally |
+| `php artisan calm:sample` | Re-apply channel sample limits across their whole history |
 | `php artisan calm:prune-runs` | Trim refresh history older than 30 days |
 
 `calm:prune-runs` is the only thing in the app that deletes on a schedule, and it only touches
@@ -117,6 +118,15 @@ Two bulk actions, because clearing fifty videos one at a time is not a feature:
 
 Both offer **Undo**, and neither deletes or hides anything. The videos stay in your archive,
 still reachable from the channel page; they just stop waiting for you.
+
+### Channels that publish too much
+
+Some channels post one real video a day and a dozen clips cut out of it. On the channel's
+**Edit** screen, *"How much of this channel reaches your feed"* keeps only the longest few of
+each day; everything else stays on the channel page under a **Set aside** tab.
+
+Length is the whole rule, which is why it is per channel and off by default — it works on a
+clip farm and is worthless on a channel whose uploads are all a similar length.
 
 Long videos remember where you stopped. Reopening one offers "Resume from 18:42" rather than
 seeking there on its own, and the card shows a thin bar across the thumbnail.

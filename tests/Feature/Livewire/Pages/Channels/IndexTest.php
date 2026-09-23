@@ -435,3 +435,82 @@ describe('unwatched counts', function (): void {
             ->assertDontSee('0 unwatched');
     });
 });
+
+describe('sampling a noisy channel', function (): void {
+    it('saves a limit on how much of the channel reaches the feed', function (): void {
+        $channel = calmChannel();
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('sampleLimit', '3')
+            ->call('save');
+
+        expect($channel->fresh()->sample_limit)->toBe(3);
+    });
+
+    it('applies the limit to what is already here, not only to the next refresh', function (): void {
+        $channel = calmChannel();
+
+        foreach ([71, 12, 4, 3, 2] as $index => $minutes) {
+            Video::factory()->for($channel)->create([
+                'duration_seconds' => $minutes * 60,
+                'published_at' => '2026-09-22 1'.$index.':00:00',
+            ]);
+        }
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('sampleLimit', '3')
+            ->call('save');
+
+        expect(Video::inFeed()->count())->toBe(3);
+    });
+
+    it('puts everything back when the limit is cleared', function (): void {
+        $channel = calmChannel(['sample_limit' => 1]);
+        Video::factory()->for($channel)->setAside()->count(3)->create();
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('sampleLimit', '')
+            ->call('save');
+
+        expect($channel->fresh()->sample_limit)->toBeNull()
+            ->and(Video::query()->setAside()->count())->toBe(0);
+    });
+
+    it('loads the limit already set', function (): void {
+        $channel = calmChannel(['sample_limit' => 5]);
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->assertSet('sampleLimit', '5');
+    });
+
+    it('refuses a limit that is not a sensible number', function (): void {
+        $channel = calmChannel();
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('sampleLimit', '0')
+            ->call('save')
+            ->assertHasErrors('sampleLimit');
+
+        expect($channel->fresh()->sample_limit)->toBeNull();
+    });
+
+    it('says on the row how much of the channel is reaching you', function (): void {
+        $channel = calmChannel(['sample_limit' => 3]);
+        Video::factory()->for($channel)->setAside()->count(11)->create();
+
+        Livewire::test('pages::channels.index')
+            ->assertSee('keeping 3 a day')
+            ->assertSee('11 set aside');
+    });
+
+    it('says nothing about sampling on a channel that is not sampled', function (): void {
+        calmChannel();
+
+        Livewire::test('pages::channels.index')->assertDontSee('a day');
+    });
+});

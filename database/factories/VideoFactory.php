@@ -35,6 +35,7 @@ class VideoFactory extends Factory
             'live_status' => LiveStatus::None,
             'scheduled_start_at' => null,
             'resume_seconds' => null,
+            'sampled_out_at' => null,
             'watched_at' => null,
             'hidden_at' => null,
             'unavailable_at' => null,
@@ -119,6 +120,14 @@ class VideoFactory extends Factory
     /**
      * Its thumbnail has been downloaded and is served from disk.
      */
+    /**
+     * Held back from the feed by its channel's sample limit.
+     */
+    public function setAside(): static
+    {
+        return $this->state(fn (): array => ['sampled_out_at' => now()]);
+    }
+
     public function archived(): static
     {
         return $this->state(fn (array $attributes): array => [

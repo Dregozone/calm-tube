@@ -23,6 +23,7 @@ channels ──< videos
 | `uploads_playlist_id` | string(32) | yes | null | Stored for possible future backfill; unused |
 | `is_enabled` | boolean | no | `true` | Disabled channels are not refreshed and not shown in the feed |
 | `playback_rate` | float | yes | `null` | Speed every video from this channel plays at; null is normal |
+| `sample_limit` | integer | yes | `null` | Uploads a day that reach the feed; null is all of them |
 | `feed_etag` | string | yes | null | For conditional RSS requests |
 | `feed_last_modified` | string | yes | null | For conditional RSS requests |
 | `last_refreshed_at` | timestamp | yes | null | Last **successful** refresh |
@@ -50,6 +51,7 @@ directly.
 | `published_at` | timestamp | no | — | From the feed's `<published>` |
 | `duration_seconds` | integer | yes | null | Null = unknown (no API key, quota, or live) |
 | `resume_seconds` | integer | yes | null | How far in you got; null means not started, or finished |
+| `sampled_out_at` | timestamp | yes | null | Held back by the channel's sample limit; still archived |
 | `thumbnail_url` | string | yes | null | Source URL; fallback when no local file |
 | `thumbnail_path` | string | yes | null | Archived file, relative to the configured disk |
 | `is_short` | boolean | yes | null | Null = not yet determined. Once set, never re-checked |

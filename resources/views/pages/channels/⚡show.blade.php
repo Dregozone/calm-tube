@@ -19,7 +19,7 @@ new class extends Component
 
     public Channel $channel;
 
-    /** all | unwatched */
+    /** all | unwatched | set-aside */
     #[Url]
     public string $filter = 'all';
 
@@ -125,6 +125,12 @@ new class extends Component
         return $this->archive()->unwatched()->count();
     }
 
+    #[Computed]
+    public function setAsideCount(): int
+    {
+        return $this->archive()->setAside()->count();
+    }
+
     public function youtubeUrl(): string
     {
         return 'https://www.youtube.com/channel/'.$this->channel->youtube_channel_id;
@@ -156,6 +162,7 @@ new class extends Component
         return $this->archive()
             ->with('channel')
             ->when($this->filter === 'unwatched', fn (Builder $query) => $query->unwatched())
+            ->when($this->filter === 'set-aside', fn (Builder $query) => $query->setAside())
             ->orderByDesc('published_at')
             ->paginate((int) config('calm-tube.feed.per_page'));
     }
@@ -230,6 +237,16 @@ new class extends Component
         </flux:callout>
     @endif
 
+    @if ($channel->isSampled())
+        <flux:callout variant="secondary" class="mt-4">
+            {{ __('Keeping the :n longest uploads a day from this channel.', ['n' => $channel->sample_limit]) }}
+            {{ __(':aside of :total set aside — they are all still here, just not in your feed.', [
+                'aside' => $this->setAsideCount,
+                'total' => $this->total,
+            ]) }}
+        </flux:callout>
+    @endif
+
     @if ($channel->hasRefreshError())
         <flux:callout variant="danger" class="mt-4">
             {{ __('The last refresh failed') }} — {{ $channel->last_refresh_error }}
@@ -246,6 +263,10 @@ new class extends Component
                 <flux:radio.group wire:model.live="filter" variant="segmented" size="sm">
                     <flux:radio value="all">{{ __('All') }}</flux:radio>
                     <flux:radio value="unwatched">{{ __('Unwatched') }}</flux:radio>
+
+                    @if ($this->setAsideCount > 0)
+                        <flux:radio value="set-aside">{{ __('Set aside') }}</flux:radio>
+                    @endif
                 </flux:radio.group>
 
                 @if ($this->unwatchedCount > 0)

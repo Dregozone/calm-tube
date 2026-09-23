@@ -166,6 +166,12 @@ new #[Title('Feed')] class extends Component
             // "All caught up" is only true if there was anything to catch up
             // on. An empty library needs a refresh, not congratulations.
             'hasVideos' => Video::query()->inFeed()->exists(),
+            'sampledChannels' => Channel::query()
+                ->enabled()
+                ->whereNotNull('sample_limit')
+                ->withCount(['videos as set_aside_count' => fn ($query) => $query->setAside()])
+                ->orderBy('title')
+                ->get(),
             'lastRefreshedAt' => Channel::query()->max('last_refreshed_at'),
             'missingApiKey' => config('calm-tube.api_key') === null,
         ];
@@ -266,6 +272,18 @@ new #[Title('Feed')] class extends Component
             </flux:button>
         </div>
     @endunless
+
+    @if ($sampledChannels->isNotEmpty() && $sampledChannels->sum('set_aside_count') > 0)
+        <flux:text size="sm" class="mt-4 block">
+            {{ __('Sampling set aside') }}
+            {{ $sampledChannels->sum('set_aside_count') }}
+            {{ __('videos from') }}
+            {{ $sampledChannels->pluck('display_name')->join(', ', ' and ') }}.
+            <a href="{{ route('channels.index') }}" wire:navigate class="underline">
+                {{ __('They are on their channel pages.') }}
+            </a>
+        </flux:text>
+    @endif
 
     @if ($followsNothing)
         <div class="mt-16 text-center">

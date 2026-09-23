@@ -340,3 +340,38 @@ describe('the default filter', function (): void {
             ->assertDontSee('all caught up');
     });
 });
+
+describe('sampled channels in the feed', function (): void {
+    it('leaves set-aside videos out of the feed', function (): void {
+        $channel = calmChannel(['sample_limit' => 1]);
+        $kept = Video::factory()->for($channel)->create(['title' => 'The Long One']);
+        Video::factory()->for($channel)->setAside()->create(['title' => 'An Offcut']);
+
+        Livewire::test('pages::feed')
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$kept->id]);
+    });
+
+    it('says what the rule did rather than quietly dropping things', function (): void {
+        $channel = calmChannel(['sample_limit' => 3]);
+        Video::factory()->for($channel)->create();
+        Video::factory()->for($channel)->setAside()->count(11)->create();
+
+        Livewire::test('pages::feed')
+            ->assertSee('Sampling set aside')
+            ->assertSee('11')
+            ->assertSee(CALM_CHANNEL_TITLE);
+    });
+
+    it('stays quiet when no channel is sampled', function (): void {
+        Video::factory()->for(calmChannel())->count(2)->create();
+
+        Livewire::test('pages::feed')->assertDontSee('Sampling set aside');
+    });
+
+    it('stays quiet when a sampled channel has had nothing set aside', function (): void {
+        $channel = calmChannel(['sample_limit' => 10]);
+        Video::factory()->for($channel)->count(2)->create();
+
+        Livewire::test('pages::feed')->assertDontSee('Sampling set aside');
+    });
+});

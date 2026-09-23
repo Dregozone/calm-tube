@@ -472,6 +472,34 @@ the app that isn't reversible.
 
 ---
 
+## Sampling a noisy channel
+
+Some channels publish one substantial piece and a dozen offcuts of it in a single day.
+Following them means either drowning or unfollowing, and both lose you the good one.
+
+`channels.sample_limit` keeps the **longest few uploads of each day** and sets the rest aside.
+Null — the default for every channel — means everything reaches the feed as before.
+
+**Length is the whole of the rule.** On the channels this exists for it separates the talk
+from the clips cut out of it almost perfectly, it needs no model and no history of what you
+like, and it fits in one sentence. It is worth nothing on a channel whose uploads are all much
+the same length, which is exactly why it is off unless you turn it on.
+
+The unit is the **publication day**, not the refresh that found them: refreshes are an
+implementation detail, days are not, and a day gives the same answer however many times it is
+recalculated. Raising the limit brings videos straight back; clearing it returns everything.
+
+A video whose duration is unknown is **never** set aside. The API may not have answered yet,
+and dropping a video because we could not measure it is the one outcome this must not produce.
+`calm:sample` re-applies the rule once `calm:enrich` has filled those durations in.
+
+**Nothing is deleted or hidden.** `sampled_out_at` is checked by `scopeInFeed()` and
+deliberately *not* by `scopeViewable()`, so a set-aside video stays on its channel page, has
+its own filter tab there, and is one click away. The feed says what the rule did rather than
+quietly dropping things.
+
+---
+
 ## Screen 4 — Channel page (`/channels/{channel}`)
 
 ```

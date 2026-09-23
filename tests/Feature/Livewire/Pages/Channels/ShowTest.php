@@ -191,3 +191,43 @@ describe('clearing a channel', function (): void {
             ->assertSee('0 unwatched');
     });
 });
+
+describe('the set-aside videos', function (): void {
+    it('still shows them on the channel page', function (): void {
+        $channel = calmChannel(['sample_limit' => 1]);
+        $aside = Video::factory()->for($channel)->setAside()->create(['title' => 'Cut From The Long One']);
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])
+            ->assertSee($aside->title);
+    });
+
+    it('offers a filter for exactly what sampling held back', function (): void {
+        $channel = calmChannel(['sample_limit' => 1]);
+        $kept = Video::factory()->for($channel)->create(['title' => 'The Long One']);
+        $aside = Video::factory()->for($channel)->setAside()->create(['title' => 'An Offcut']);
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])
+            ->set('filter', 'set-aside')
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$aside->id]);
+
+        expect($kept->fresh()->isSetAside())->toBeFalse();
+    });
+
+    it('does not offer the filter when nothing was held back', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])
+            ->assertDontSee('Set aside');
+    });
+
+    it('explains the rule and what it did', function (): void {
+        $channel = calmChannel(['sample_limit' => 3]);
+        Video::factory()->for($channel)->count(3)->create();
+        Video::factory()->for($channel)->setAside()->count(11)->create();
+
+        Livewire::test('pages::channels.show', ['channel' => $channel])
+            ->assertSee('Keeping the 3 longest uploads a day')
+            ->assertSee('11 of 14 set aside');
+    });
+});

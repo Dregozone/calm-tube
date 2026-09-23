@@ -26,6 +26,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $uploads_playlist_id
  * @property bool $is_enabled
  * @property float|null $playback_rate
+ * @property int|null $sample_limit
  * @property string|null $feed_etag
  * @property string|null $feed_last_modified
  * @property CarbonImmutable|null $last_refreshed_at
@@ -45,6 +46,7 @@ use Illuminate\Support\Facades\Storage;
     'uploads_playlist_id',
     'is_enabled',
     'playback_rate',
+    'sample_limit',
     'feed_etag',
     'feed_last_modified',
     'last_refreshed_at',
@@ -135,6 +137,14 @@ class Channel extends Model
         });
     }
 
+    /**
+     * Only some of this channel's uploads reach the feed.
+     */
+    public function isSampled(): bool
+    {
+        return $this->sample_limit !== null;
+    }
+
     public function hasRefreshError(): bool
     {
         return $this->last_refresh_error !== null;
@@ -148,6 +158,7 @@ class Channel extends Model
         return [
             'is_enabled' => 'boolean',
             'playback_rate' => 'float',
+            'sample_limit' => 'integer',
             'last_refreshed_at' => 'datetime',
         ];
     }

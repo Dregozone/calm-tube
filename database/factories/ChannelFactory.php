@@ -28,6 +28,7 @@ class ChannelFactory extends Factory
             'uploads_playlist_id' => 'UU'.Str::random(22),
             'is_enabled' => true,
             'playback_rate' => null,
+            'sample_limit' => null,
             'feed_etag' => null,
             'feed_last_modified' => null,
             'last_refreshed_at' => now()->subMinutes(14),
@@ -68,6 +69,14 @@ class ChannelFactory extends Factory
     public function atSpeed(float $rate): static
     {
         return $this->state(fn (): array => ['playback_rate' => $rate]);
+    }
+
+    /**
+     * Only the longest few of each day's uploads reach the feed.
+     */
+    public function sampled(int $limit = 3): static
+    {
+        return $this->state(fn (): array => ['sample_limit' => $limit]);
     }
 
     public function archived(): static

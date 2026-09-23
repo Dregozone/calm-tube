@@ -178,4 +178,5 @@ So future sessions don't relitigate these:
 | Bulk triage | "Mark page watched" on the feed, "Mark all as watched" on a channel, both with Undo. Nothing is ever deleted or hidden by them |
 | Resuming | Position stored per video, offered rather than applied, cleared on finish or restart |
 | Descriptions | Closed by default; links inside them still work |
+| Sampling | Per channel, opt-in, longest few per day. Length only — no model, no preference history. Sets aside, never deletes or hides |
 | AI | Out of scope for the initial build |

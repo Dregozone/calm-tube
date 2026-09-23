@@ -4,6 +4,7 @@ use App\Enums\RefreshTrigger;
 use App\Exceptions\YouTubeException;
 use App\Jobs\RefreshChannel;
 use App\Models\Channel;
+use App\Services\ChannelSampler;
 use App\Services\YouTube\ChannelResolver;
 use App\Services\YouTube\ImageArchiver;
 use App\Support\RefreshResult;
@@ -27,6 +28,9 @@ new #[Title('Channels')] class extends Component
     public string $customName = '';
 
     public string $playbackRate = '';
+
+    /** Uploads a day to keep from this channel; empty means all of them. */
+    public string $sampleLimit = '';
 
     public ?int $deletingId = null;
 
@@ -108,11 +112,12 @@ new #[Title('Channels')] class extends Component
         $this->editingId = $channel->id;
         $this->customName = $channel->custom_name ?? '';
         $this->playbackRate = $channel->playback_rate === null ? '' : (string) $channel->playback_rate;
+        $this->sampleLimit = $channel->sample_limit === null ? '' : (string) $channel->sample_limit;
         $this->resetErrorBag();
         $this->editOpen = true;
     }
 
-    public function save(): void
+    public function save(ChannelSampler $sampler): void
     {
         $channel = Channel::findOrFail($this->editingId);
 
@@ -125,6 +130,7 @@ new #[Title('Channels')] class extends Component
                 'nullable',
                 Rule::in(array_map(fn (float $rate): string => (string) $rate, $rates)),
             ],
+            'sampleLimit' => ['nullable', 'integer', 'min:1', 'max:50'],
         ]);
 
         // An emptied field means "go back to what YouTube calls it", not an
@@ -132,12 +138,19 @@ new #[Title('Channels')] class extends Component
         $channel->forceFill([
             'custom_name' => $this->customName === '' ? null : $this->customName,
             'playback_rate' => $this->playbackRate === '' ? null : (float) $this->playbackRate,
+            'sample_limit' => $this->sampleLimit === '' ? null : (int) $this->sampleLimit,
         ])->save();
+
+        // Applied to what is already here, not only to the next refresh:
+        // setting a limit and seeing the feed unchanged would read as broken.
+        $setAside = $sampler->apply($channel->fresh());
 
         $this->editOpen = false;
         $this->editingId = null;
 
-        session()->flash('status', "Saved {$channel->display_name}.");
+        session()->flash('status', $channel->isSampled() && $setAside > 0
+            ? "Saved {$channel->display_name}. {$setAside} videos set aside."
+            : "Saved {$channel->display_name}.");
     }
 
     public function confirmDelete(int $channelId): void
@@ -237,6 +250,7 @@ new #[Title('Channels')] class extends Component
             'channels' => Channel::query()
                 ->withCount([
                     'videos',
+                    'videos as set_aside_count' => fn ($query) => $query->setAside(),
                     // Counted the way the feed counts, so the number on the
                     // row is the number of cards you would actually see.
                     'videos as unwatched_count' => fn ($query) => $query->viewable()->unwatched(),
@@ -325,6 +339,10 @@ new #[Title('Channels')] class extends Component
                             @if ($channel->playback_rate !== null)
                                 · {{ $channel->effective_playback_rate }}×
                             @endif
+                            @if ($channel->isSampled())
+                                · {{ __('keeping :n a day', ['n' => $channel->sample_limit]) }}
+                                ({{ $channel->set_aside_count }} {{ __('set aside') }})
+                            @endif
                             @unless ($channel->is_enabled)
                                 · {{ __('disabled, hidden from your feed') }}
                             @endunless
@@ -410,6 +428,24 @@ new #[Title('Channels')] class extends Component
                         <flux:select.option value="{{ $rate }}">{{ $rate }}×</flux:select.option>
                     @endforeach
                 </flux:select>
+
+                <flux:select
+                    wire:model="sampleLimit"
+                    :label="__('How much of this channel reaches your feed')"
+                    :description="__('For channels that publish one real video and a pile of clips cut from it. The longest few of each day reach the feed; the rest stay on this channel\'s page. Nothing is deleted.')"
+                >
+                    <flux:select.option value="">{{ __('Everything it publishes') }}</flux:select.option>
+
+                    @foreach ([1, 2, 3, 5, 10] as $limit)
+                        <flux:select.option value="{{ $limit }}">
+                            {{ __('The :n longest a day', ['n' => $limit]) }}
+                        </flux:select.option>
+                    @endforeach
+                </flux:select>
+
+                @error('sampleLimit')
+                    <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>
+                @enderror
 
                 <div class="flex justify-end gap-2">
                     <flux:button wire:click="$set('editOpen', false)" variant="subtle">

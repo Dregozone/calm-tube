@@ -492,3 +492,64 @@ describe('when the feed is unavailable', function (): void {
             ->and(requestsTo('playlistItems'))->toBe(0);
     });
 });
+
+describe('sampling a noisy channel', function (): void {
+    it('sets aside what the day it ingested holds past the limit', function (): void {
+        Storage::fake('local');
+        fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
+        // A seeded video makes the all-new feed look like an overflow, so the
+        // uploads walk that follows needs a stub of its own.
+        fakeUploadsPlaylist('playlist-items-empty.json');
+        $channel = calmChannel(['sample_limit' => 1]);
+
+        // Already the longest thing published that day; the entry arriving
+        // below is the offcut this is meant to hold back.
+        $longest = Video::factory()->for($channel)->create([
+            'duration_seconds' => 3 * 3600,
+            'published_at' => '2026-03-15 09:00:00',
+        ]);
+
+        $this->refresher->refresh($channel);
+
+        expect(Video::inFeed()->pluck('id')->all())->toBe([$longest->id])
+            ->and(Video::where('youtube_video_id', CALM_VIDEO_ID)->sole()->isSetAside())->toBeTrue();
+    });
+
+    it('leaves a channel that publishes once a day untouched by a limit of three', function (): void {
+        Storage::fake('local');
+        fakeSuccessfulRefresh();
+        $channel = calmChannel(['sample_limit' => 3]);
+
+        // The rule is per day, so a steady channel never trips it.
+        $this->refresher->refresh($channel);
+
+        expect(Video::query()->setAside()->count())->toBe(0)
+            ->and(Video::inFeed()->count())->toBe(15);
+    });
+
+    it('still counts everything it ingested as new', function (): void {
+        Storage::fake('local');
+        fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
+        fakeUploadsPlaylist('playlist-items-empty.json');
+        $channel = calmChannel(['sample_limit' => 1]);
+        Video::factory()->for($channel)->create([
+            'duration_seconds' => 3 * 3600,
+            'published_at' => '2026-03-15 09:00:00',
+        ]);
+
+        // Sampling decides what you are shown, not what was fetched; the
+        // refresh report should not start lying about the latter.
+        expect($this->refresher->refresh($channel)->newVideos)->toBe(1);
+    });
+
+    it('leaves a channel without a limit completely alone', function (): void {
+        Storage::fake('local');
+        fakeSuccessfulRefresh();
+        $channel = calmChannel();
+
+        $this->refresher->refresh($channel);
+
+        expect(Video::query()->setAside()->count())->toBe(0)
+            ->and(Video::inFeed()->count())->toBe(15);
+    });
+});

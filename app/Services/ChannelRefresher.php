@@ -37,6 +37,7 @@ class ChannelRefresher
         private readonly DataApiClient $api,
         private readonly VideoEnricher $enricher,
         private readonly ChannelBackfiller $backfiller,
+        private readonly ChannelSampler $sampler,
     ) {}
 
     public function refresh(
@@ -58,6 +59,10 @@ class ChannelRefresher
         $degradedBecause = $this->enrich($created);
 
         $recovered = $this->recoverOverflow($channel, $feed->entries, $created->count());
+
+        // After enrichment, because the rule ranks on duration and a video
+        // with no duration yet is never set aside.
+        $this->sampler->applyTo($channel, $created);
 
         $channel->forceFill([
             'feed_etag' => $feed->etag,
@@ -197,6 +202,8 @@ class ChannelRefresher
         ]);
 
         $recovered = $this->backfiller->backfill($channel, self::OVERFLOW_LIMIT, untilKnown: true);
+
+        $this->sampler->applyTo($channel, $recovered);
 
         $channel->forceFill([
             // Validators belong to a feed that did not answer.
