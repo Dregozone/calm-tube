@@ -25,6 +25,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $avatar_path
  * @property string|null $uploads_playlist_id
  * @property bool $is_enabled
+ * @property float|null $playback_rate
  * @property string|null $feed_etag
  * @property string|null $feed_last_modified
  * @property CarbonImmutable|null $last_refreshed_at
@@ -32,6 +33,7 @@ use Illuminate\Support\Facades\Storage;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read string $display_name
+ * @property-read float $effective_playback_rate
  */
 #[Fillable([
     'youtube_channel_id',
@@ -42,6 +44,7 @@ use Illuminate\Support\Facades\Storage;
     'avatar_path',
     'uploads_playlist_id',
     'is_enabled',
+    'playback_rate',
     'feed_etag',
     'feed_last_modified',
     'last_refreshed_at',
@@ -113,6 +116,25 @@ class Channel extends Model
         return Attribute::get(fn (): string => $this->custom_name ?? $this->title);
     }
 
+    /**
+     * The speed every video on this channel plays at, normal unless you have
+     * chosen otherwise. A rate that is no longer offered is ignored rather
+     * than passed to the player, which would refuse it anyway.
+     *
+     * @return Attribute<float, never>
+     */
+    protected function effectivePlaybackRate(): Attribute
+    {
+        return Attribute::get(function (): float {
+            /** @var list<float> $allowed */
+            $allowed = config('calm-tube.player.playback_rates');
+
+            return $this->playback_rate !== null && in_array($this->playback_rate, $allowed, true)
+                ? $this->playback_rate
+                : 1.0;
+        });
+    }
+
     public function hasRefreshError(): bool
     {
         return $this->last_refresh_error !== null;
@@ -125,6 +147,7 @@ class Channel extends Model
     {
         return [
             'is_enabled' => 'boolean',
+            'playback_rate' => 'float',
             'last_refreshed_at' => 'datetime',
         ];
     }

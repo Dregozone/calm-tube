@@ -3,6 +3,7 @@
 use App\Models\Video;
 use App\Support\DescriptionRenderer;
 use Illuminate\Support\HtmlString;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -10,6 +11,16 @@ use Livewire\Component;
 new #[Title('Watch')] class extends Component
 {
     public Video $video;
+
+    /** The channel's playback speed as a form value; empty means normal. */
+    public string $playbackRate = '';
+
+    public function mount(): void
+    {
+        $this->playbackRate = $this->video->channel->playback_rate === null
+            ? ''
+            : (string) $this->video->channel->playback_rate;
+    }
 
     public function markWatched(): void
     {
@@ -39,6 +50,29 @@ new #[Title('Watch')] class extends Component
     public function markUnavailable(): void
     {
         $this->video->forceFill(['unavailable_at' => now()])->save();
+    }
+
+    /**
+     * Speed belongs to the speaker, not to one video, so it is stored on the
+     * channel and applied to everything it publishes from here on.
+     */
+    public function updatedPlaybackRate(): void
+    {
+        /** @var list<float> $allowed */
+        $allowed = config('calm-tube.player.playback_rates');
+
+        $this->validateOnly('playbackRate', [
+            'playbackRate' => [
+                'nullable',
+                Rule::in(array_map(fn (float $rate): string => (string) $rate, $allowed)),
+            ],
+        ]);
+
+        $this->video->channel->forceFill([
+            'playback_rate' => $this->playbackRate === '' ? null : (float) $this->playbackRate,
+        ])->save();
+
+        $this->dispatch('playback-rate-changed', rate: $this->video->channel->effective_playback_rate);
     }
 
     /**
@@ -100,172 +134,257 @@ new #[Title('Watch')] class extends Component
     }
 }; ?>
 
-<section class="mx-auto w-full max-w-4xl px-4 py-8">
-    <flux:button :href="route('feed')" wire:navigate variant="subtle" size="sm" icon="arrow-left">
-        {{ __('Back to feed') }}
-    </flux:button>
+<section class="w-full pb-12">
+    <div class="mx-auto w-full max-w-7xl px-4 pt-6">
+        <flux:button :href="route('feed')" wire:navigate variant="subtle" size="sm" icon="arrow-left">
+            {{ __('Back to feed') }}
+        </flux:button>
+    </div>
 
-    @if ($this->video->isUnavailable())
-        <div class="mt-6 flex aspect-video w-full flex-col items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:heading size="lg">{{ __('This video is no longer available on YouTube.') }}</flux:heading>
+    {{-- As large as the viewport allows while staying whole: the width is
+         capped by the height left over, so the player never runs off screen. --}}
+    <div
+        class="mx-auto mt-4 w-full px-4"
+        style="max-width: min(100%, calc((100dvh - 11rem) * 16 / 9 + 2rem));"
+    >
+        @if ($this->video->isUnavailable())
+            <div class="flex aspect-video w-full flex-col items-center justify-center rounded-xl border border-zinc-200 bg-zinc-50 p-8 text-center dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading size="lg">{{ __('This video is no longer available on YouTube.') }}</flux:heading>
 
-            <flux:text class="mt-2">
-                {{ __('What was archived here is kept below.') }}
-            </flux:text>
-        </div>
-    @else
-        <div class="relative mt-6 aspect-video w-full overflow-hidden rounded-xl bg-black">
-            <iframe
-                id="calm-player"
-                class="absolute inset-0 size-full"
-                src="{{ $this->embedUrl() }}"
-                title="{{ $this->video->title }}"
-                frameborder="0"
-                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowfullscreen
-            ></iframe>
-
-            {{-- In the DOM from the start: built when the video ends, it would
-                 appear a beat after YouTube's own end screen. --}}
-            <div
-                id="calm-ended"
-                class="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-3 bg-zinc-950/95 p-8 text-center"
-                data-return-url="{{ $this->returnUrl() }}"
-            >
-                <flux:heading size="lg" class="text-white">{{ __('Finished.') }}</flux:heading>
-
-                {{-- Leaving is automatic, arriving somewhere new never is. Any
-                     button below stops the countdown. --}}
-                <flux:text id="calm-countdown" class="text-white/70">
-                    {{ __('Returning to your videos in') }} <span id="calm-countdown-seconds">3</span>…
+                <flux:text class="mt-2">
+                    {{ __('What was archived here is kept below.') }}
                 </flux:text>
+            </div>
+        @else
+            {{-- wire:ignore matters here. Marking the video watched re-renders
+                 the component, and without it Livewire's morph would put the
+                 panels back to hidden the instant the video ended. --}}
+            <div
+                wire:ignore
+                id="calm-stage"
+                class="relative aspect-video w-full overflow-hidden rounded-xl bg-black shadow-xl"
+                data-return-url="{{ $this->returnUrl() }}"
+                data-playback-rate="{{ $this->video->channel->effective_playback_rate }}"
+                data-countdown-seconds="{{ config('calm-tube.player.countdown_seconds') }}"
+            >
+                <iframe
+                    id="calm-player"
+                    class="absolute inset-0 size-full"
+                    src="{{ $this->embedUrl() }}"
+                    title="{{ $this->video->title }}"
+                    frameborder="0"
+                    allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen
+                ></iframe>
 
-                <div class="mt-2 flex flex-col items-center gap-2">
-                    <flux:button :href="route('feed')" wire:navigate variant="primary" size="sm">
-                        {{ __('Back to feed') }}
-                    </flux:button>
+                {{-- In the DOM from the start: built when the video ends, it
+                     would appear a beat after YouTube's own end screen. --}}
+                <div
+                    id="calm-ended"
+                    class="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-3 bg-zinc-950/95 p-8 text-center"
+                >
+                    <flux:heading size="lg" class="text-white">{{ __('Finished.') }}</flux:heading>
 
-                    @if ($this->nextUnwatched)
-                        <flux:button
-                            :href="route('videos.watch', $this->nextUnwatched)"
-                            wire:navigate
-                            variant="subtle"
-                            size="sm"
-                            class="!text-white"
-                        >
-                            <span class="line-clamp-1">
-                                {{ __('Next unwatched') }}: {{ $this->nextUnwatched->title }}
-                            </span>
+                    <div class="mt-2 flex flex-col items-center gap-2">
+                        <flux:button id="calm-back" variant="primary" size="sm">
+                            {{ __('Back to feed') }}
                         </flux:button>
-                    @endif
 
-                    <flux:button id="calm-replay" variant="subtle" size="sm" class="!text-white">
-                        {{ __('Replay') }}
-                    </flux:button>
+                        @if ($this->nextUnwatched)
+                            <flux:button
+                                :href="route('videos.watch', $this->nextUnwatched)"
+                                variant="subtle"
+                                size="sm"
+                                class="!text-white"
+                            >
+                                <span class="line-clamp-1">
+                                    {{ __('Next unwatched') }}: {{ $this->nextUnwatched->title }}
+                                </span>
+                            </flux:button>
+                        @endif
 
-                    <flux:button id="calm-stay" variant="ghost" size="xs" class="!text-white/60">
-                        {{ __('Stay here') }}
+                        <flux:button id="calm-replay" variant="subtle" size="sm" class="!text-white">
+                            {{ __('Replay') }}
+                        </flux:button>
+                    </div>
+                </div>
+
+                <div
+                    id="calm-error"
+                    class="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-3 bg-zinc-950/95 p-8 text-center"
+                >
+                    <flux:heading size="lg" class="text-white">
+                        {{ __("This video can't be played here.") }}
+                    </flux:heading>
+
+                    <flux:button href="{{ $this->watchOnYouTubeUrl() }}" target="_blank" rel="noopener noreferrer" variant="primary" size="sm">
+                        {{ __('Open on YouTube') }}
                     </flux:button>
                 </div>
             </div>
+        @endif
+    </div>
 
-            <div
-                id="calm-error"
-                class="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-3 bg-zinc-950/95 p-8 text-center"
+    <div class="mx-auto mt-6 w-full max-w-5xl px-4">
+        <flux:heading size="xl" level="1">{{ $this->video->title }}</flux:heading>
+
+        <div class="mt-2 flex flex-wrap items-center gap-2">
+            <img
+                src="{{ route('avatars.show', $this->video->channel) }}"
+                alt=""
+                class="size-6 rounded-full bg-zinc-200 object-cover dark:bg-zinc-700"
+            />
+
+            <flux:text>{{ $this->video->channel->display_name }}</flux:text>
+            <flux:text>·</flux:text>
+            <flux:text>{{ $this->video->published_at->diffForHumans() }}</flux:text>
+
+            @if ($this->video->duration_for_humans)
+                <flux:text>·</flux:text>
+                <flux:text class="tabular-nums">{{ $this->video->duration_for_humans }}</flux:text>
+            @endif
+
+            @if ($this->video->live_status !== App\Enums\LiveStatus::None && $this->video->scheduled_start_at)
+                <flux:text>·</flux:text>
+                <flux:text>{{ __('Scheduled for') }} {{ $this->video->scheduled_start_at->toFormattedDateString() }}</flux:text>
+            @endif
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center gap-2">
+            <flux:button wire:click="toggleWatched" size="sm" variant="subtle">
+                {{ $this->video->isWatched() ? __('Mark as unwatched') : __('Mark as watched') }}
+            </flux:button>
+
+            <a
+                href="{{ $this->watchOnYouTubeUrl() }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
             >
-                <flux:heading size="lg" class="text-white">
-                    {{ __("This video can't be played here.") }}
-                </flux:heading>
+                {{ __('Open on YouTube') }}
+                <flux:icon.arrow-top-right-on-square variant="micro" />
+            </a>
 
-                <flux:button href="{{ $this->watchOnYouTubeUrl() }}" target="_blank" rel="noopener noreferrer" variant="primary" size="sm">
-                    {{ __('Open on YouTube') }}
+            <div class="flex items-center gap-2 sm:ms-auto">
+                <flux:text size="sm" id="calm-speed-label">{{ __('Speed') }}</flux:text>
+
+                <flux:select
+                    wire:model.live="playbackRate"
+                    size="sm"
+                    class="max-w-40"
+                    aria-labelledby="calm-speed-label"
+                >
+                    <flux:select.option value="">{{ __('Normal speed') }}</flux:select.option>
+
+                    @foreach (config('calm-tube.player.playback_rates') as $rate)
+                        @continue ($rate === 1.0)
+
+                        <flux:select.option value="{{ $rate }}">{{ $rate }}×</flux:select.option>
+                    @endforeach
+                </flux:select>
+            </div>
+        </div>
+
+        <flux:text size="sm" class="mt-2 block">
+            @if ($this->video->channel->playback_rate !== null)
+                {{ __('Every video from') }} {{ $this->video->channel->display_name }}
+                {{ __('plays at') }} {{ $this->video->channel->effective_playback_rate }}×.
+            @else
+                {{ __('Speed applies to every video from this channel.') }}
+            @endif
+        </flux:text>
+
+        @if ($this->video->isWatched())
+            <flux:text size="sm" class="mt-2 block">
+                {{ __('Watched') }} {{ $this->video->watched_at->diffForHumans() }}
+            </flux:text>
+        @endif
+
+        @if ($this->video->description)
+            <div x-data="{ expanded: false }" class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
+                <div
+                    class="whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-300"
+                    :class="expanded || 'line-clamp-6'"
+                >{!! $this->description() !!}</div>
+
+                <flux:button x-on:click="expanded = ! expanded" size="xs" variant="subtle" class="mt-2">
+                    <span x-text="expanded ? '{{ __('Show less') }}' : '{{ __('Show more') }}'">{{ __('Show more') }}</span>
+                </flux:button>
+            </div>
+        @endif
+    </div>
+
+    {{-- Fixed to the viewport rather than to the player, so it is seen however
+         far down the page you have scrolled, and ignored by Livewire so that
+         marking the video watched cannot wipe it out mid-countdown. --}}
+    <div
+        wire:ignore
+        id="calm-countdown"
+        class="fixed inset-0 z-50 hidden items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-sm"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="calm-countdown-title"
+    >
+        <div class="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
+            <flux:heading size="lg" id="calm-countdown-title">
+                {{ __('Returning to your videos in') }}
+            </flux:heading>
+
+            <p class="mt-4 text-6xl font-semibold tabular-nums text-zinc-900 dark:text-white">
+                <span id="calm-countdown-seconds">{{ config('calm-tube.player.countdown_seconds') }}</span>
+            </p>
+
+            <flux:text class="mt-4">
+                {{ __('Stay on this page to keep the countdown from finishing.') }}
+            </flux:text>
+
+            <div class="mt-6 flex flex-col gap-2">
+                <flux:button id="calm-go-now" variant="primary">
+                    {{ __('Go now') }}
+                </flux:button>
+
+                <flux:button id="calm-stay" variant="subtle">
+                    {{ __('Stay here') }}
                 </flux:button>
             </div>
         </div>
-    @endif
-
-    <flux:heading size="xl" level="1" class="mt-6">{{ $this->video->title }}</flux:heading>
-
-    <div class="mt-2 flex flex-wrap items-center gap-2">
-        <img
-            src="{{ route('avatars.show', $this->video->channel) }}"
-            alt=""
-            class="size-6 rounded-full bg-zinc-200 object-cover dark:bg-zinc-700"
-        />
-
-        <flux:text>{{ $this->video->channel->display_name }}</flux:text>
-        <flux:text>·</flux:text>
-        <flux:text>{{ $this->video->published_at->diffForHumans() }}</flux:text>
-
-        @if ($this->video->duration_for_humans)
-            <flux:text>·</flux:text>
-            <flux:text class="tabular-nums">{{ $this->video->duration_for_humans }}</flux:text>
-        @endif
-
-        @if ($this->video->live_status !== App\Enums\LiveStatus::None && $this->video->scheduled_start_at)
-            <flux:text>·</flux:text>
-            <flux:text>{{ __('Scheduled for') }} {{ $this->video->scheduled_start_at->toFormattedDateString() }}</flux:text>
-        @endif
     </div>
-
-    <div class="mt-5 flex flex-wrap items-center gap-2">
-        <flux:button wire:click="toggleWatched" size="sm" variant="subtle">
-            {{ $this->video->isWatched() ? __('Mark as unwatched') : __('Mark as watched') }}
-        </flux:button>
-
-        <a
-            href="{{ $this->watchOnYouTubeUrl() }}"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
-        >
-            {{ __('Open on YouTube') }}
-            <flux:icon.arrow-top-right-on-square variant="micro" />
-        </a>
-    </div>
-
-    @if ($this->video->isWatched())
-        <flux:text size="sm" class="mt-2 block">
-            {{ __('Watched') }} {{ $this->video->watched_at->diffForHumans() }}
-        </flux:text>
-    @endif
-
-    @if ($this->video->description)
-        <div x-data="{ expanded: false }" class="mt-6 border-t border-zinc-200 pt-6 dark:border-zinc-700">
-            <div
-                class="whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-300"
-                :class="expanded || 'line-clamp-6'"
-            >{!! $this->description() !!}</div>
-
-            <flux:button x-on:click="expanded = ! expanded" size="xs" variant="subtle" class="mt-2">
-                <span x-text="expanded ? '{{ __('Show less') }}' : '{{ __('Show more') }}'">{{ __('Show more') }}</span>
-            </flux:button>
-        </div>
-    @endif
 </section>
 
 @script
 <script>
+    const stage = document.getElementById('calm-stage');
     const frame = document.getElementById('calm-player');
     const ended = document.getElementById('calm-ended');
     const errored = document.getElementById('calm-error');
+    const modal = document.getElementById('calm-countdown');
 
-    if (frame) {
+    if (frame && stage) {
         const reveal = (panel) => panel?.classList.replace('hidden', 'flex');
         const conceal = (panel) => panel?.classList.replace('flex', 'hidden');
+
+        const returnUrl = stage.dataset.returnUrl;
+        const total = Number(stage.dataset.countdownSeconds || 5);
+        let rate = Number(stage.dataset.playbackRate || 1);
 
         let countdown = null;
 
         const stopCountdown = () => {
             clearTimeout(countdown);
             countdown = null;
-            document.getElementById('calm-countdown')?.classList.add('hidden');
+            conceal(modal);
+        };
+
+        const leaveNow = () => {
+            stopCountdown();
+            window.location.assign(returnUrl);
         };
 
         const startCountdown = () => {
             const label = document.getElementById('calm-countdown-seconds');
-            const returnUrl = ended?.dataset.returnUrl;
-            let remaining = 3;
+            let remaining = total;
+
+            reveal(modal);
 
             const tick = () => {
                 if (label) {
@@ -273,7 +392,7 @@ new #[Title('Watch')] class extends Component
                 }
 
                 if (remaining <= 0) {
-                    window.location.assign(returnUrl);
+                    leaveNow();
 
                     return;
                 }
@@ -285,22 +404,49 @@ new #[Title('Watch')] class extends Component
             tick();
         };
 
-        // Choosing anything else is a decision to stay.
-        ended?.addEventListener('click', stopCountdown);
+        // Every way out of the countdown other than letting it finish.
+        document.getElementById('calm-stay')?.addEventListener('click', stopCountdown);
+        document.getElementById('calm-go-now')?.addEventListener('click', leaveNow);
+        document.getElementById('calm-back')?.addEventListener('click', leaveNow);
+        modal?.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                stopCountdown();
+            }
+        });
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && countdown !== null) {
+                stopCountdown();
+            }
+        });
 
         const boot = () => {
+            const applyRate = () => {
+                if (rate !== 1) {
+                    player.setPlaybackRate(rate);
+                }
+            };
+
             const player = new YT.Player(frame, {
                 events: {
+                    onReady: applyRate,
                     onStateChange(event) {
-                        if (event.data === YT.PlayerState.ENDED) {
-                            reveal(ended);
-                            $wire.markWatched();
-                            startCountdown();
-                        }
-
                         if (event.data === YT.PlayerState.PLAYING) {
                             conceal(ended);
                             stopCountdown();
+                            // YouTube resets the rate when a video actually
+                            // starts, so asking once on ready is not enough.
+                            applyRate();
+                        }
+
+                        if (event.data === YT.PlayerState.ENDED) {
+                            // A fullscreen player would sit above the modal.
+                            if (document.fullscreenElement) {
+                                document.exitFullscreen?.();
+                            }
+
+                            reveal(ended);
+                            $wire.markWatched();
+                            startCountdown();
                         }
                     },
                     onError(event) {
@@ -310,9 +456,17 @@ new #[Title('Watch')] class extends Component
                             $wire.markUnavailable();
                         }
 
+                        stopCountdown();
                         reveal(errored);
                     },
                 },
+            });
+
+            // Changing the speed applies to what you are watching right now,
+            // not only to the next video from this channel.
+            $wire.on('playback-rate-changed', (event) => {
+                rate = Number(event.rate ?? 1);
+                player.setPlaybackRate(rate);
             });
 
             document.getElementById('calm-replay')?.addEventListener('click', () => {
@@ -321,8 +475,6 @@ new #[Title('Watch')] class extends Component
                 player.seekTo(0);
                 player.playVideo();
             });
-
-            document.getElementById('calm-stay')?.addEventListener('click', stopCountdown);
         };
 
         if (window.YT && window.YT.Player) {

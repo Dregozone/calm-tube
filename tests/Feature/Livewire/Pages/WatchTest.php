@@ -232,6 +232,35 @@ describe('returning to the feed', function (): void {
             ->assertSee('startCountdown', escape: false);
     });
 
+    it('counts down in a modal fixed to the viewport, not tucked inside the player', function (): void {
+        $video = watchable();
+
+        // Anchored to the player it would be missed by anyone scrolled down
+        // the page, which is exactly what happened the first time.
+        $this->get(route('videos.watch', $video))
+            ->assertSee('id="calm-countdown"', escape: false)
+            ->assertSee('fixed inset-0 z-50', escape: false)
+            ->assertSee('aria-modal="true"', escape: false);
+    });
+
+    it('keeps the panels out of the morph, so marking watched cannot hide them', function (): void {
+        $video = watchable();
+
+        // Marking the video watched re-renders the component. Without
+        // wire:ignore the morph restores the server-rendered "hidden" and the
+        // countdown runs invisibly.
+        $this->get(route('videos.watch', $video))
+            ->assertSee('wire:ignore', escape: false);
+    });
+
+    it('counts from the configured number of seconds', function (): void {
+        config()->set('calm-tube.player.countdown_seconds', 9);
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('data-countdown-seconds="9"', escape: false);
+    });
+
     it('offers a way to stay, and stops counting when anything else is chosen', function (): void {
         $video = watchable();
 
@@ -240,6 +269,7 @@ describe('returning to the feed', function (): void {
         $this->get(route('videos.watch', $video))
             ->assertSee('Stay here')
             ->assertSee('calm-stay', escape: false)
+            ->assertSee('Go now')
             ->assertSee('stopCountdown', escape: false);
     });
 
@@ -267,5 +297,70 @@ describe('returning to the feed', function (): void {
 
         $this->get(route('videos.watch', $video))
             ->assertSee('data-return-url="'.route('feed').'"', escape: false);
+    });
+});
+
+describe('playback speed', function (): void {
+    it('plays at normal speed when the channel has no preference', function (): void {
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('data-playback-rate="1"', escape: false);
+    });
+
+    it('carries the chosen speed of the channel into the player', function (): void {
+        $channel = calmChannel(['playback_rate' => 2.0]);
+        $video = Video::factory()->for($channel)->create();
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('data-playback-rate="2"', escape: false)
+            ->assertSee('setPlaybackRate', escape: false);
+    });
+
+    it('stores a chosen speed on the channel, not on the video', function (): void {
+        $video = watchable();
+
+        Livewire::test('pages::watch', ['video' => $video])
+            ->set('playbackRate', '1.5')
+            ->assertHasNoErrors();
+
+        expect($video->channel->fresh()->playback_rate)->toBe(1.5);
+    });
+
+    it('applies to every other video from the same channel', function (): void {
+        $video = watchable();
+        $another = Video::factory()->for($video->channel)->create();
+
+        Livewire::test('pages::watch', ['video' => $video])->set('playbackRate', '2');
+
+        $this->get(route('videos.watch', $another->fresh()))
+            ->assertSee('data-playback-rate="2"', escape: false);
+    });
+
+    it('returns to normal speed when the preference is cleared', function (): void {
+        $channel = calmChannel(['playback_rate' => 2.0]);
+        $video = Video::factory()->for($channel)->create();
+
+        Livewire::test('pages::watch', ['video' => $video])->set('playbackRate', '');
+
+        expect($channel->fresh()->playback_rate)->toBeNull();
+    });
+
+    it('refuses a rate the player would not accept', function (): void {
+        $video = watchable();
+
+        Livewire::test('pages::watch', ['video' => $video])
+            ->set('playbackRate', '7')
+            ->assertHasErrors('playbackRate');
+
+        expect($video->channel->fresh()->playback_rate)->toBeNull();
+    });
+
+    it('tells the player about the change without waiting for the next video', function (): void {
+        $video = watchable();
+
+        Livewire::test('pages::watch', ['video' => $video])
+            ->set('playbackRate', '1.25')
+            ->assertDispatched('playback-rate-changed', rate: 1.25);
     });
 });

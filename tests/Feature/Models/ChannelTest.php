@@ -60,3 +60,21 @@ it('reports the last refresh as failed when an error is stored', function (): vo
     expect($failing->hasRefreshError())->toBeTrue()
         ->and($healthy->hasRefreshError())->toBeFalse();
 });
+
+describe('playback speed', function (): void {
+    it('plays at normal speed unless told otherwise', function (): void {
+        expect(Channel::factory()->create()->effective_playback_rate)->toBe(1.0);
+    });
+
+    it('remembers the speed chosen for a channel', function (): void {
+        expect(Channel::factory()->atSpeed(2.0)->create()->effective_playback_rate)->toBe(2.0);
+    });
+
+    it('ignores a stored rate the player no longer offers', function (): void {
+        // The list is configuration, so a rate can stop being valid without
+        // the row being rewritten. Normal speed is the safe reading.
+        $channel = Channel::factory()->atSpeed(3.5)->create();
+
+        expect($channel->effective_playback_rate)->toBe(1.0);
+    });
+});

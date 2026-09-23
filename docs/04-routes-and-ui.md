@@ -207,9 +207,18 @@ One video, its metadata, and nothing that suggests another.
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-**Player:** 16:9 container, max-width ~960px, centred. Embed parameters and the IFrame API
-wiring are specified in
-[05-youtube-integration.md](05-youtube-integration.md#the-embed).
+**Player:** 16:9, centred, and as large as the viewport allows. Its width is capped by the
+height left over rather than by a fixed pixel figure —
+`max-width: min(100%, calc((100dvh - 11rem) * 16 / 9 + 2rem))` — so the whole player is always
+on screen and never smaller than it needs to be. Embed parameters and the IFrame API wiring
+are specified in [05-youtube-integration.md](05-youtube-integration.md#the-embed).
+
+**Playback speed** is a property of the channel, not of the video: some presenters are worth
+watching at 1.5x or 2x every time, and choosing that once beats reaching for the player's menu
+on every upload. The select on this page writes `channels.playback_rate`, applies immediately
+to what is playing, and applies to every later video from that channel. Allowed rates come
+from `calm-tube.player.playback_rates`, and a rate outside that list is refused rather than
+handed to a player that would reject it anyway.
 
 **Title** is the archived one — the same string you saw on the card, regardless of what the
 video is called on YouTube today.
@@ -226,7 +235,13 @@ the rest of the app's restrictions tolerable.
 ### The end-of-video panel
 
 When the IFrame API reports `ENDED`, an overlay covers the player area before YouTube's
-end-screen grid can be read, and the video is marked watched automatically.
+end-screen grid can be read, and the video is marked watched automatically. A separate modal,
+fixed to the viewport, then counts down and returns you to the list you came from.
+
+**Both are `wire:ignore`.** They are shown by toggling classes from JavaScript, and marking the
+video watched re-renders the component; without `wire:ignore` Livewire's morph restores the
+server-rendered `hidden` and the countdown runs invisibly to its end. That is not hypothetical
+— it is what shipped first.
 
 ```
       ┌────────────────────────────────────────────────────────────┐
@@ -244,6 +259,35 @@ end-screen grid can be read, and the video is marked watched automatically.
   autoplay** — you click, or you don't.
 - "Replay" calls `player.seekTo(0)` and hides the overlay.
 - Marking watched happens via `$wire.markWatched()`, so a page reload shows the new state.
+
+### The countdown
+
+```
+             ┌──────────────────────────────────┐
+             │   Returning to your videos in    │
+             │                                  │
+             │                5                 │
+             │                                  │
+             │  Stay on this page to keep the   │
+             │  countdown from finishing.       │
+             │                                  │
+             │         [   Go now   ]           │
+             │         [  Stay here ]           │
+             └──────────────────────────────────┘
+```
+
+Centred over the whole viewport rather than inside the player, so it is seen however far down
+the page you have scrolled. If the player was fullscreen it is dropped out of fullscreen first,
+because a fullscreen iframe sits above everything else.
+
+The countdown returns you to the feed **as a full page visit**, carrying the filter and channel
+you left it on, so a video just marked watched is gone from an unwatched list rather than
+lingering in a cached grid.
+
+Every way out of it: "Stay here", "Go now", the panel's own buttons, clicking the backdrop, or
+Escape. Its length is `calm-tube.player.countdown_seconds`.
+
+Leaving is automatic; arriving anywhere new never is.
 
 ### Watch states
 

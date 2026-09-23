@@ -172,4 +172,6 @@ So future sessions don't relitigate these:
 | Channel removal | Disable is the default action; delete is secondary and cascades |
 | Titles | Archived at first ingest, never updated, changes never stored or surfaced |
 | Thumbnails | Archived locally, `maxresdefault` → `mqdefault`, served via a route |
+| Playback speed | Per channel, not per video. Stored on `channels.playback_rate`, set from the watch page |
+| End of video | Overlay covers the end screen, then a viewport-fixed modal counts down and returns you to your list. Both `wire:ignore` |
 | AI | Out of scope for the initial build |

@@ -81,6 +81,27 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Player
+    |--------------------------------------------------------------------------
+    |
+    | Playback speed is remembered per channel, because it is a property of the
+    | speaker rather than of any one video. The rates below are the ones the
+    | YouTube IFrame API accepts for every video; anything else is refused
+    | rather than silently ignored by the player.
+    |
+    | countdown_seconds is how long the end-of-video modal waits before
+    | returning you to your list. Leaving is automatic; arriving anywhere new
+    | never is.
+    |
+    */
+
+    'player' => [
+        'playback_rates' => [0.25, 0.5, 0.75, 1.0, 1.25, 1.5, 1.75, 2.0],
+        'countdown_seconds' => 5,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Feed
     |--------------------------------------------------------------------------
     |

@@ -27,6 +27,7 @@ class ChannelFactory extends Factory
             'avatar_path' => null,
             'uploads_playlist_id' => 'UU'.Str::random(22),
             'is_enabled' => true,
+            'playback_rate' => null,
             'feed_etag' => null,
             'feed_last_modified' => null,
             'last_refreshed_at' => now()->subMinutes(14),
@@ -59,6 +60,14 @@ class ChannelFactory extends Factory
             'last_refresh_error' => "Couldn't reach the feed.",
             'last_refreshed_at' => now()->subHours(2),
         ]);
+    }
+
+    /**
+     * Every video on this channel plays at the given speed.
+     */
+    public function atSpeed(float $rate): static
+    {
+        return $this->state(fn (): array => ['playback_rate' => $rate]);
     }
 
     public function archived(): static
