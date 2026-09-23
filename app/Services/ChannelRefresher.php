@@ -60,9 +60,11 @@ class ChannelRefresher
 
         $recovered = $this->recoverOverflow($channel, $feed->entries, $created->count());
 
+        $stored = $created->merge($recovered);
+
         // After enrichment, because the rule ranks on duration and a video
         // with no duration yet is never set aside.
-        $this->sampler->applyTo($channel, $created);
+        $this->sampler->applyTo($channel, $stored);
 
         $channel->forceFill([
             'feed_etag' => $feed->etag,
@@ -71,19 +73,21 @@ class ChannelRefresher
             'last_refresh_error' => null,
         ])->save();
 
-        $newVideos = $created->count() + $recovered;
+        $newVideos = $stored->count();
+        $reachedFeed = $this->reachedFeed($stored);
 
         Log::channel('calm')->info('Channel refreshed', [
             'channel_id' => $channel->youtube_channel_id,
             'new' => $newVideos,
-            'recovered' => $recovered,
+            'reached_feed' => $reachedFeed,
+            'recovered' => $recovered->count(),
             'not_modified' => $feed->notModified,
             'degraded' => $degradedBecause,
         ]);
 
         return $this->finish($run, $degradedBecause === null
-            ? RefreshResult::ok($newVideos)
-            : RefreshResult::degraded($newVideos, $degradedBecause));
+            ? RefreshResult::ok($newVideos, $reachedFeed)
+            : RefreshResult::degraded($newVideos, $degradedBecause, $reachedFeed));
     }
 
     /**
@@ -205,6 +209,8 @@ class ChannelRefresher
 
         $this->sampler->applyTo($channel, $recovered);
 
+        $reachedFeed = $this->reachedFeed($recovered);
+
         $channel->forceFill([
             // Validators belong to a feed that did not answer.
             'feed_etag' => null,
@@ -213,7 +219,7 @@ class ChannelRefresher
             'last_refresh_error' => null,
         ])->save();
 
-        return $this->finish($run, RefreshResult::ok($recovered->count()));
+        return $this->finish($run, RefreshResult::ok($recovered->count(), $reachedFeed));
     }
 
     /**
@@ -225,21 +231,41 @@ class ChannelRefresher
      * definition; calm:backfill is the explicit way to reach further back.
      *
      * @param  list<FeedEntry>  $entries
+     * @return Collection<int, Video>
      */
-    private function recoverOverflow(Channel $channel, array $entries, int $created): int
+    private function recoverOverflow(Channel $channel, array $entries, int $created): Collection
     {
         $isFirstRefresh = $channel->videos()->count() === $created;
 
         if ($entries === [] || $created < count($entries) || $isFirstRefresh) {
-            return 0;
+            return new Collection;
         }
 
         if (! $this->api->isConfigured()) {
+            return new Collection;
+        }
+
+        return $this->backfiller->backfill($channel, self::OVERFLOW_LIMIT, untilKnown: true);
+    }
+
+    /**
+     * How many of the videos just stored will actually appear in the feed.
+     *
+     * Asked of the database rather than of the models, because enrichment and
+     * sampling have both written to them since they were made, and because
+     * scopeInFeed is the only definition of the answer.
+     *
+     * @param  Collection<int, Video>  $stored
+     */
+    private function reachedFeed(Collection $stored): int
+    {
+        if ($stored->isEmpty()) {
             return 0;
         }
 
-        return $this->backfiller
-            ->backfill($channel, self::OVERFLOW_LIMIT, untilKnown: true)
+        return Video::query()
+            ->inFeed()
+            ->whereKey($stored->map(fn (Video $video): int => $video->getKey())->all())
             ->count();
     }
 

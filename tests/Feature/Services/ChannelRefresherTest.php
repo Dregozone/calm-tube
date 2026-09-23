@@ -6,6 +6,7 @@ use App\Models\Channel;
 use App\Models\RefreshRun;
 use App\Models\Video;
 use App\Services\ChannelRefresher;
+use App\Support\RefreshResult;
 use Illuminate\Http\Client\Request;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
@@ -551,5 +552,93 @@ describe('sampling a noisy channel', function (): void {
 
         expect(Video::query()->setAside()->count())->toBe(0)
             ->and(Video::inFeed()->count())->toBe(15);
+    });
+});
+
+describe('what a refresh reports', function (): void {
+    it('counts only what you will actually see', function (): void {
+        Storage::fake('local');
+        fakeFeed('feed-single-entry.xml');
+        fakeVideosList('videos.list-short.json');
+        fakeShortsProbe(200);
+        fakeThumbnailDownloads();
+        $channel = calmChannel();
+
+        $result = $this->refresher->refresh($channel);
+
+        // Stored, so the archive grew; a Short, so the feed did not. Telling
+        // someone "1 new video" and showing them nothing reads as a bug.
+        expect($result->newVideos)->toBe(1)
+            ->and($result->reachedFeed)->toBe(0)
+            ->and($result->keptBack())->toBe(1);
+    });
+
+    it('says so in a sentence rather than leaving you to wonder', function (): void {
+        Storage::fake('local');
+        fakeFeed('feed-single-entry.xml');
+        fakeVideosList('videos.list-short.json');
+        fakeShortsProbe(200);
+        fakeThumbnailDownloads();
+
+        $result = $this->refresher->refresh(calmChannel());
+
+        expect($result->summary())->toBe('No new videos. 1 other upload was a Short or held back.');
+    });
+
+    it('counts a video that did reach the feed', function (): void {
+        Storage::fake('local');
+        fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
+
+        $result = $this->refresher->refresh(calmChannel());
+
+        expect($result->newVideos)->toBe(1)
+            ->and($result->reachedFeed)->toBe(1)
+            ->and($result->summary())->toBe('1 new video.');
+    });
+
+    it('counts a video its channel sample limit held back', function (): void {
+        Storage::fake('local');
+        fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
+        fakeUploadsPlaylist('playlist-items-empty.json');
+        $channel = calmChannel(['sample_limit' => 1]);
+        Video::factory()->for($channel)->create([
+            'duration_seconds' => 3 * 3600,
+            'published_at' => '2026-03-15 09:00:00',
+        ]);
+
+        $result = $this->refresher->refresh($channel);
+
+        expect($result->newVideos)->toBe(1)
+            ->and($result->reachedFeed)->toBe(0);
+    });
+});
+
+describe('summarising a run across channels', function (): void {
+    it('adds up what reached the feed and what did not', function (): void {
+        $summary = RefreshResult::summarise([
+            RefreshResult::ok(5, 1),
+            RefreshResult::ok(3, 0),
+        ]);
+
+        expect($summary)->toBe('1 new video. 7 other uploads were Shorts or held back.');
+    });
+
+    it('says plainly when nothing arrived', function (): void {
+        expect(RefreshResult::summarise([RefreshResult::ok(0, 0)]))
+            ->toBe('No new videos.');
+    });
+
+    it('does not mention withheld uploads when there were none', function (): void {
+        expect(RefreshResult::summarise([RefreshResult::ok(2, 2)]))
+            ->toBe('2 new videos.');
+    });
+
+    it('counts the channels that failed', function (): void {
+        $summary = RefreshResult::summarise([
+            RefreshResult::ok(1, 1),
+            RefreshResult::failed('Nope.'),
+        ]);
+
+        expect($summary)->toBe('1 new video. 1 channel failed to refresh.');
     });
 });

@@ -482,6 +482,23 @@ the app that isn't reversible.
 
 ---
 
+## What a refresh reports
+
+`RefreshResult` carries two counts because they answer different questions. `newVideos` is how
+much the **archive** grew and is what `refresh_runs` records. `reachedFeed` is how many of those
+you will actually **see**.
+
+Only the second belongs in front of a person. On a Shorts heavy channel a refresh routinely
+stores several videos and surfaces none of them, and "2 new videos" above an unchanged feed
+reads as a bug in the app rather than as the app working exactly as designed.
+
+`RefreshResult::summary()` is the single phrasing, used by every screen that reports a refresh
+so they cannot drift apart:
+
+> No new videos. 22 other uploads were Shorts or held back.
+
+---
+
 ## Keeping the feed current without a scheduler
 
 Nothing in this app is queued. `RefreshChannel` is not a `ShouldQueue` and is always
@@ -521,6 +538,15 @@ the same length, which is exactly why it is off unless you turn it on.
 The unit is the **publication day**, not the refresh that found them: refreshes are an
 implementation detail, days are not, and a day gives the same answer however many times it is
 recalculated. Raising the limit brings videos straight back; clearing it returns everything.
+
+**A day is recalculated from scratch every time it is touched.** A longer video arriving in the
+evening takes its place among the keepers and the shortest of them drops out, because the rule
+is "the longest few this channel published that day" and not "the first few we happened to
+see". The day is not over until it is over.
+
+The exception is anything you have **watched or started**: `scopeTouched()`. Those are never
+set aside, and one that was set aside before you went and watched it on the channel page comes
+back. A rule that recalculates must not take back a video you had already opened.
 
 A video whose duration is unknown is **never** set aside. The API may not have answered yet,
 and dropping a video because we could not measure it is the one outcome this must not produce.

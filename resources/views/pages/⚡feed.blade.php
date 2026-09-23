@@ -158,7 +158,9 @@ new #[Title('Feed')] class extends Component
             $result = RefreshChannel::dispatchSync($channel, RefreshTrigger::Stale);
 
             if ($result instanceof RefreshResult && ! $result->isFailed()) {
-                $new += $result->newVideos;
+                // Only what you would actually see: a haul of Shorts should
+                // not announce itself as videos waiting for you.
+                $new += $result->reachedFeed;
             }
         }
 
@@ -205,29 +207,12 @@ new #[Title('Feed')] class extends Component
     {
         $this->undoable = [];
         $this->showNew();
-        $channels = Channel::query()->enabled()->get();
-        $new = 0;
-        $failed = 0;
 
-        foreach ($channels as $channel) {
-            $result = RefreshChannel::dispatchSync($channel);
+        $results = Channel::query()->enabled()->get()
+            ->map(fn (Channel $channel) => RefreshChannel::dispatchSync($channel))
+            ->filter(fn ($result): bool => $result instanceof RefreshResult);
 
-            if (! $result instanceof RefreshResult) {
-                continue;
-            }
-
-            $result->isFailed() ? $failed++ : $new += $result->newVideos;
-        }
-
-        $this->status = sprintf(
-            '%s.%s',
-            $new === 0
-                ? __('No new videos')
-                : $new.' '.__('new').' '.($new === 1 ? __('video') : __('videos')),
-            $failed === 0
-                ? ''
-                : ' '.$failed.' '.($failed === 1 ? __('channel') : __('channels')).' '.__('failed to refresh.')
-        );
+        $this->status = RefreshResult::summarise($results);
 
         $this->resetPage();
     }

@@ -81,12 +81,11 @@ new #[Title('Channels')] class extends Component
         }
 
         $result = RefreshChannel::dispatchSync($created);
-        $imported = $result instanceof RefreshResult ? $result->newVideos : 0;
 
         session()->flash('status', sprintf(
-            'Added %s. %s imported.',
+            'Added %s. %s',
             $created->display_name,
-            $imported === 1 ? '1 video' : "{$imported} videos"
+            $result instanceof RefreshResult ? $result->summary() : 'Nothing imported.'
         ));
     }
 
@@ -209,36 +208,16 @@ new #[Title('Channels')] class extends Component
 
         session()->flash('status', $result->isFailed()
             ? "{$channel->display_name}: {$result->errorMessage}"
-            : sprintf(
-                '%s: %s.',
-                $channel->display_name,
-                $result->newVideos === 0
-                    ? 'no new videos'
-                    : "{$result->newVideos} new ".($result->newVideos === 1 ? 'video' : 'videos')
-            ));
+            : "{$channel->display_name}: ".lcfirst($result->summary()));
     }
 
     public function refreshAll(): void
     {
-        $channels = Channel::query()->enabled()->get();
-        $new = 0;
-        $failed = 0;
+        $results = Channel::query()->enabled()->get()
+            ->map(fn (Channel $channel) => RefreshChannel::dispatchSync($channel))
+            ->filter(fn ($result): bool => $result instanceof RefreshResult);
 
-        foreach ($channels as $channel) {
-            $result = RefreshChannel::dispatchSync($channel);
-
-            if (! $result instanceof RefreshResult) {
-                continue;
-            }
-
-            $result->isFailed() ? $failed++ : $new += $result->newVideos;
-        }
-
-        session()->flash('status', sprintf(
-            '%s.%s',
-            $new === 0 ? 'No new videos' : $new.' new '.($new === 1 ? 'video' : 'videos'),
-            $failed === 0 ? '' : " {$failed} channel could not be refreshed."
-        ));
+        session()->flash('status', RefreshResult::summarise($results));
     }
 
     /**

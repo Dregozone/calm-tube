@@ -181,4 +181,5 @@ So future sessions don't relitigate these:
 | Sampling | Per channel, opt-in, longest few per day. Length only — no model, no preference history. Sets aside, never deletes or hides |
 | Autoplay | The video you clicked plays. Nothing ever chooses the next one |
 | Staying current | Opening a stale feed refreshes it after render. No scheduler, no queue worker, nothing to remember to start |
+| Refresh counts | Report what reached the feed, not what was stored. Shorts are stored and never shown, so the two differ constantly |
 | AI | Out of scope for the initial build |

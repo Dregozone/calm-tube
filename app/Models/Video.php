@@ -162,6 +162,30 @@ class Video extends Model
     }
 
     /**
+     * You have watched this, or started to.
+     *
+     * Enough for a channel's sample limit to leave it alone: a rule that
+     * recalculates a day can otherwise take back a video you had already
+     * opened, which is the one thing it must never do.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeTouched(Builder $query): void
+    {
+        $query->where(fn (Builder $either): Builder => $either
+            ->whereNotNull('watched_at')
+            ->orWhereNotNull('resume_seconds'));
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     */
+    public function scopeUntouched(Builder $query): void
+    {
+        $query->whereNull('watched_at')->whereNull('resume_seconds');
+    }
+
+    /**
      * @param  Builder<$this>  $query
      */
     public function scopeUnwatched(Builder $query): void

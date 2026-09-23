@@ -167,3 +167,71 @@ describe('what a set-aside video still is', function (): void {
             ->and($aside->hidden_at)->toBeNull();
     });
 });
+
+describe('a longer video arriving later the same day', function (): void {
+    it('takes its place, and the shortest keeper drops out', function (): void {
+        $channel = Channel::factory()->sampled(3)->create();
+        uploadsOn($channel, '2026-09-22', [12, 4, 3, 2]);
+        sampler()->apply($channel);
+
+        expect(Video::inFeed()->pluck('duration_seconds')->sortDesc()->values()->all())
+            ->toBe([12 * 60, 4 * 60, 3 * 60]);
+
+        // The compilation lands at the end of the day.
+        $late = uploadsOn($channel, '2026-09-22', [71]);
+        sampler()->applyTo($channel, $late);
+
+        // Always the longest three the channel published that day, not the
+        // first three we happened to see.
+        expect(Video::inFeed()->pluck('duration_seconds')->sortDesc()->values()->all())
+            ->toBe([71 * 60, 12 * 60, 4 * 60]);
+    });
+
+    it('never takes back a video you have already watched', function (): void {
+        $channel = Channel::factory()->sampled(1)->create();
+        $short = uploadsOn($channel, '2026-09-22', [4])->first();
+        sampler()->apply($channel);
+        $short->forceFill(['watched_at' => now()])->save();
+
+        sampler()->applyTo($channel, uploadsOn($channel, '2026-09-22', [71]));
+
+        expect($short->fresh()->isSetAside())->toBeFalse();
+    });
+
+    it('never takes back a video you have started', function (): void {
+        $channel = Channel::factory()->sampled(1)->create();
+        $short = uploadsOn($channel, '2026-09-22', [4])->first();
+        $short->forceFill(['resume_seconds' => 90])->save();
+
+        sampler()->applyTo($channel, uploadsOn($channel, '2026-09-22', [71]));
+
+        expect($short->fresh()->isSetAside())->toBeFalse();
+    });
+
+    it('still lets the longer one in alongside it', function (): void {
+        $channel = Channel::factory()->sampled(1)->create();
+        $short = uploadsOn($channel, '2026-09-22', [4])->first();
+        $short->forceFill(['resume_seconds' => 90])->save();
+        $long = uploadsOn($channel, '2026-09-22', [71])->first();
+
+        sampler()->applyTo($channel, collect([$long]));
+
+        expect(Video::inFeed()->pluck('id')->sort()->values()->all())
+            ->toBe(collect([$short->id, $long->id])->sort()->values()->all());
+    });
+
+    it('brings back one you set aside and then went and watched', function (): void {
+        $channel = Channel::factory()->sampled(1)->create();
+        $videos = uploadsOn($channel, '2026-09-22', [40, 5]);
+        sampler()->apply($channel);
+
+        $aside = $videos->last();
+        expect($aside->fresh()->isSetAside())->toBeTrue();
+
+        // Found it on the channel page and watched it anyway.
+        $aside->forceFill(['watched_at' => now()])->save();
+        sampler()->apply($channel);
+
+        expect($aside->fresh()->isSetAside())->toBeFalse();
+    });
+});

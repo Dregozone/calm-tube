@@ -60,9 +60,7 @@ new class extends Component
 
         $this->status = $result->isFailed()
             ? $result->errorMessage
-            : ($result->newVideos === 0
-                ? __('No new videos.')
-                : $result->newVideos.' '.__('new').' '.($result->newVideos === 1 ? __('video') : __('videos')).'.');
+            : $result->summary();
 
         $this->resetPage();
     }

@@ -92,16 +92,27 @@ class ChannelSampler
      * Ranks one day's uploads longest first and sets aside everything past
      * the limit.
      *
-     * A video whose duration is unknown is never set aside. The API may not
-     * have answered yet, and silently dropping a video because we could not
-     * measure it is the one outcome this must not produce.
+     * Recalculated from scratch every time, so a longer video arriving later
+     * in the day takes its place and the shortest of the day's keepers drops
+     * out. The rule is always "the longest few this channel published that
+     * day", not "the first few we happened to see".
+     *
+     * Two things are never set aside. A video whose duration is unknown,
+     * because the API may not have answered yet and dropping a video for
+     * being unmeasurable is the one outcome this must not produce. And a
+     * video you have watched or started, because a rule that recalculates
+     * must not take back something you had already opened.
      */
     private function applyToDay(Channel $channel, string $day): int
     {
+        $ofTheDay = fn () => $channel->videos()->viewable()->whereDate('published_at', $day);
+
+        // Yours, not the rule's — and brought back if the rule had it.
+        $this->mark($ofTheDay()->touched()->get(), null);
+
         /** @var Collection<int, Video> $measured */
-        $measured = $channel->videos()
-            ->viewable()
-            ->whereDate('published_at', $day)
+        $measured = $ofTheDay()
+            ->untouched()
             ->whereNotNull('duration_seconds')
             ->orderByDesc('duration_seconds')
             ->orderByDesc('published_at')
