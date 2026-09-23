@@ -10,6 +10,7 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('feed', 'pages::feed')->name('feed');
     Route::livewire('watch/{video}', 'pages::watch')->name('videos.watch');
     Route::livewire('channels', 'pages::channels.index')->name('channels.index');
+    Route::livewire('channels/{channel}', 'pages::channels.show')->name('channels.show');
 
     Route::get('thumbnails/{video}', ThumbnailController::class)->name('thumbnails.show');
     Route::get('avatars/{channel}', AvatarController::class)->name('avatars.show');

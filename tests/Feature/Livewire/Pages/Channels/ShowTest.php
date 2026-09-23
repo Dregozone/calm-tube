@@ -39,15 +39,19 @@ it('shows this channel videos newest first', function (): void {
         ->assertSeeInOrder(['Newer', 'Older']);
 });
 
+/**
+ * As on the feed, the filter is asserted through the view data rather than the
+ * rendered cards: set() is an update request, and Livewire returns nested
+ * components as empty shells because the browser keeps the existing DOM.
+ */
 it('filters this channel down to unwatched', function (): void {
     $channel = calmChannel();
     $unwatched = Video::factory()->for($channel)->create(['title' => 'Not Seen Yet']);
-    $watched = Video::factory()->for($channel)->watched()->create(['title' => 'Already Seen']);
+    Video::factory()->for($channel)->watched()->create(['title' => 'Already Seen']);
 
     Livewire::test('pages::channels.show', ['channel' => $channel])
         ->set('filter', 'unwatched')
-        ->assertSee($unwatched->title)
-        ->assertDontSee($watched->title);
+        ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$unwatched->id]);
 });
 
 it('paginates a long back catalogue', function (): void {

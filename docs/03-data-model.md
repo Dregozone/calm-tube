@@ -114,6 +114,10 @@ public function scopeInFeed(Builder $query): void
         ->where('live_status', LiveStatus::None)
         ->where(fn ($q) => $q->where('is_short', false)->orWhereNull('is_short'))
         ->whereHas('channel', fn ($q) => $q->where('is_enabled', true));
+
+// scopeViewable() is the same rules without the channel check. A channel page
+// shows what it archived whether or not you still follow it; the feed is the
+// stricter question, so inFeed() is viewable() plus an enabled channel.
 }
 ```
 

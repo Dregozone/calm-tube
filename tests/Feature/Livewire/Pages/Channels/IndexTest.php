@@ -337,3 +337,74 @@ it('redirects a guest to the login page', function (): void {
 
     $this->get(route('channels.index'))->assertRedirect(route('login'));
 });
+
+describe('playback speed from the channel list', function (): void {
+    it('saves a speed for every video from the channel', function (): void {
+        $channel = calmChannel();
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('playbackRate', '1.5')
+            ->call('save');
+
+        expect($channel->fresh()->playback_rate)->toBe(1.5);
+    });
+
+    it('loads the speed already chosen', function (): void {
+        $channel = calmChannel(['playback_rate' => 2.0]);
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->assertSet('playbackRate', '2');
+    });
+
+    it('returns a channel to normal speed', function (): void {
+        $channel = calmChannel(['playback_rate' => 2.0]);
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('playbackRate', '')
+            ->call('save');
+
+        expect($channel->fresh()->playback_rate)->toBeNull();
+    });
+
+    it('refuses a speed the player would not accept', function (): void {
+        $channel = calmChannel();
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('playbackRate', '9')
+            ->call('save')
+            ->assertHasErrors('playbackRate');
+
+        expect($channel->fresh()->playback_rate)->toBeNull();
+    });
+
+    it('shows the speed on the channel row', function (): void {
+        calmChannel(['playback_rate' => 2.0]);
+
+        Livewire::test('pages::channels.index')->assertSee('2×', escape: false);
+    });
+});
+
+describe('the delete confirmation', function (): void {
+    it('offers disabling as the way out that loses nothing', function (): void {
+        $channel = calmChannel();
+
+        Livewire::test('pages::channels.index')
+            ->call('confirmDelete', $channel->id)
+            ->call('toggleEnabled', $channel->id);
+
+        expect($channel->fresh()->is_enabled)->toBeFalse()
+            ->and(Channel::query()->count())->toBe(1);
+    });
+
+    it('does not offer disabling a channel that is already disabled', function (): void {
+        $channel = Channel::factory()->disabled()->create();
+
+        Livewire::test('pages::channels.index')
+            ->call('confirmDelete', $channel->id)
+            ->assertDontSee('Disable instead');
+    });
+});

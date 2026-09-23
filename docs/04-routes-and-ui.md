@@ -341,8 +341,14 @@ Management and the add form on one page.
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Disabled rows are dimmed. `[ ⋯ ]` opens a small menu whose only destructive item is
-**Delete channel…**.
+Each row shows the archived avatar, the display name — a link to that channel's own page —
+the video count, the handle, any non-normal playback speed, and either the last refresh time
+or the error from the last attempt.
+
+Disabled rows are dimmed and say so. `[ ⟳ ]` refreshes that channel alone, including a disabled
+one: disabling stops the scheduled sweep touching it, but asking for it directly is still an
+answer. `[ ⋯ ]` opens a small menu — **Edit**, **Disable** / **Enable**, and, after a separator,
+the only destructive item in the app, **Delete**.
 
 ### Adding a channel
 
@@ -380,22 +386,29 @@ Validation errors render inline under the field via Flux; success and failure of
         ┌──────────────────────────────────────────────┐
         │  Edit channel                           [×]  │
         │                                              │
-        │  Display name                                │
+        │  Your name for it                            │
         │  ┌────────────────────────────────────────┐  │
         │  │ Practical Engineering                  │  │
         │  └────────────────────────────────────────┘  │
-        │  Leave blank to use the channel's own name.  │
+        │  Leave it empty to use the name YouTube      │
+        │  gives it.                                   │
         │                                              │
-        │  [●─] Enabled                                │
-        │       Disabled channels aren't refreshed     │
-        │       and don't appear in your feed.         │
-        │                                              │
-        │  Channel ID  UCMOqf8ab-42UUQIdVoKwjlQ        │
-        │  Added       12 January 2026                 │
+        │  Playback speed                              │
+        │  ┌────────────────────────────────────────┐  │
+        │  │ Normal speed                         ▾ │  │
+        │  └────────────────────────────────────────┘  │
         │                                              │
         │                     [ Cancel ]  [ Save ]     │
         └──────────────────────────────────────────────┘
 ```
+
+Two things, both about how the channel appears to you: nothing here is sent to YouTube. An
+emptied name field means "go back to what YouTube calls it", so it is stored as null rather
+than an empty string. Speed is the same setting the watch page writes, offered here too
+because the list is where you think about a channel as a whole.
+
+Enabling and disabling is not in this modal — it is a single click in the row's menu, and
+putting it behind a Save button would make a reversible act feel like a commitment.
 
 ### Delete (confirmation modal)
 
@@ -418,8 +431,11 @@ Validation errors render inline under the field via Flux; success and failure of
         └──────────────────────────────────────────────┘
 ```
 
-Counts are real queries, not estimates. `[ Delete ]` is the danger variant and is the only
-control here that isn't reversible.
+Counts are real queries, not estimates: the total archived and how many of those you had
+marked as watched, both emphasised in the sentence so the size of the loss is impossible to
+skim past. **Disable instead** is offered on the same row, and is absent when the channel is
+already disabled. `[ Delete permanently ]` is the danger variant and is the only control in
+the app that isn't reversible.
 
 ---
 
@@ -433,7 +449,7 @@ control here that isn't reversible.
 │         @PracticalEngineering · 143 videos · 56 unwatched                    │
 │         Refreshed 14 minutes ago                                             │
 │                                                                              │
-│         [ ⟳ Refresh this channel ]  [ Edit ]  [ Open on YouTube ↗ ]          │
+│         [ ⟳ Refresh ]  [ Open on YouTube ↗ ]                                │
 │                                                                              │
 │  [ All | Unwatched ]                                                         │
 │                                                                              │
@@ -446,8 +462,14 @@ control here that isn't reversible.
 └──────────────────────────────────────────────────────────────────────────────┘
 ```
 
-Identical card component and pagination as the feed, scoped to one channel. Disabled channels
-still have a working page — you can browse the archive of a channel you've stopped following.
+Identical card component and pagination as the feed, scoped to one channel, and the browser
+tab takes the channel's name. Editing and deleting stay on the list, where they sit beside
+every other channel; this page is for reading, not administration.
+
+Disabled channels still have a working page — you can browse the archive of a channel you've
+stopped following. That is why the query behind it is `scopeViewable()` rather than
+`scopeInFeed()`: same rules about Shorts, hidden, unavailable and live videos, no rule about
+whether you still follow the channel.
 
 **Empty state:** "No videos yet. `[ ⟳ Refresh this channel ]`" — or, when the last refresh
 failed, the error and its timestamp instead.

@@ -98,21 +98,35 @@ class Video extends Model
     }
 
     /**
-     * The single definition of what belongs in the feed.
+     * The single definition of what is fit to be shown anywhere.
      *
      * A null is_short means detection could not decide, and those are shown:
      * a leaked Short is an annoyance, a silently swallowed video is not.
+     *
+     * Says nothing about the channel. A channel page shows what it archived
+     * whether or not you still follow it; the feed is the stricter question.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeViewable(Builder $query): void
+    {
+        $query->whereNull('hidden_at')
+            ->whereNull('unavailable_at')
+            ->where('live_status', LiveStatus::None)
+            ->where(fn (Builder $shortsQuery): Builder => $shortsQuery
+                ->where('is_short', false)
+                ->orWhereNull('is_short'));
+    }
+
+    /**
+     * The single definition of what belongs in the feed: viewable, and from a
+     * channel you are still following.
      *
      * @param  Builder<$this>  $query
      */
     public function scopeInFeed(Builder $query): void
     {
-        $query->whereNull('hidden_at')
-            ->whereNull('unavailable_at')
-            ->where('live_status', LiveStatus::None)
-            ->where(fn (Builder $feedQuery): Builder => $feedQuery
-                ->where('is_short', false)
-                ->orWhereNull('is_short'))
+        $query->viewable()
             ->whereHas('channel', fn (Builder $channelQuery): Builder => $channelQuery
                 ->where('is_enabled', true));
     }

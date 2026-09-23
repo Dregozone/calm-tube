@@ -1,0 +1,247 @@
+<?php
+
+use App\Enums\RefreshTrigger;
+use App\Jobs\RefreshChannel;
+use App\Models\Channel;
+use App\Models\Video;
+use App\Support\RefreshResult;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\View\View;
+use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
+use Livewire\Component;
+use Livewire\WithPagination;
+
+new class extends Component
+{
+    use WithPagination;
+
+    public Channel $channel;
+
+    /** all | unwatched */
+    #[Url]
+    public string $filter = 'all';
+
+    public ?string $status = null;
+
+    public function updated(): void
+    {
+        $this->resetPage();
+    }
+
+    /**
+     * The tab says which channel you are looking at, which a static title
+     * could not.
+     */
+    public function render(): View
+    {
+        return $this->view()->title($this->channel->display_name);
+    }
+
+    /**
+     * Refreshing here works on a disabled channel too. Disabling stops the
+     * scheduled sweep touching it; asking for it directly is still an answer.
+     */
+    public function refreshChannel(): void
+    {
+        $result = RefreshChannel::dispatchSync($this->channel, RefreshTrigger::Manual);
+
+        if (! $result instanceof RefreshResult) {
+            return;
+        }
+
+        $this->channel->refresh();
+
+        $this->status = $result->isFailed()
+            ? $result->errorMessage
+            : ($result->newVideos === 0
+                ? __('No new videos.')
+                : $result->newVideos.' '.__('new').' '.($result->newVideos === 1 ? __('video') : __('videos')).'.');
+
+        $this->resetPage();
+    }
+
+    #[Computed]
+    public function total(): int
+    {
+        return $this->archive()->count();
+    }
+
+    #[Computed]
+    public function unwatchedCount(): int
+    {
+        return $this->archive()->unwatched()->count();
+    }
+
+    public function youtubeUrl(): string
+    {
+        return 'https://www.youtube.com/channel/'.$this->channel->youtube_channel_id;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function with(): array
+    {
+        return ['videos' => $this->videos()];
+    }
+
+    /**
+     * Everything this channel archived, whether or not you still follow it.
+     *
+     * @return Builder<Video>
+     */
+    private function archive(): Builder
+    {
+        return $this->channel->videos()->getQuery()->viewable();
+    }
+
+    /**
+     * @return LengthAwarePaginator<int, Video>
+     */
+    private function videos(): LengthAwarePaginator
+    {
+        return $this->archive()
+            ->with('channel')
+            ->when($this->filter === 'unwatched', fn (Builder $query) => $query->unwatched())
+            ->orderByDesc('published_at')
+            ->paginate((int) config('calm-tube.feed.per_page'));
+    }
+}; ?>
+
+<section class="mx-auto w-full max-w-7xl px-4 py-8">
+    <flux:button :href="route('channels.index')" wire:navigate variant="subtle" size="sm" icon="arrow-left">
+        {{ __('All channels') }}
+    </flux:button>
+
+    <div class="mt-6 flex flex-wrap items-start justify-between gap-4">
+        <div class="flex min-w-0 items-center gap-4">
+            <img
+                src="{{ route('avatars.show', $channel) }}"
+                alt=""
+                class="size-14 shrink-0 rounded-full bg-zinc-200 object-cover dark:bg-zinc-700"
+            />
+
+            <div class="min-w-0">
+                <flux:heading size="xl" level="1" class="truncate">{{ $channel->display_name }}</flux:heading>
+
+                <flux:text size="sm" class="mt-1 block">
+                    {{ $this->total }} {{ Str::plural('video', $this->total) }}
+                    · {{ $this->unwatchedCount }} {{ __('unwatched') }}
+
+                    @if ($channel->handle)
+                        · {{ $channel->handle }}
+                    @endif
+
+                    @unless ($channel->is_enabled)
+                        · {{ __('disabled, hidden from your feed') }}
+                    @endunless
+                </flux:text>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+            <flux:button
+                wire:click="refreshChannel"
+                icon="arrow-path"
+                variant="subtle"
+                size="sm"
+                wire:loading.attr="disabled"
+                class="data-loading:opacity-50"
+            >
+                {{ __('Refresh') }}
+            </flux:button>
+
+            <a
+                href="{{ $this->youtubeUrl() }}"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-white"
+            >
+                {{ __('Open on YouTube') }}
+                <flux:icon.arrow-top-right-on-square variant="micro" />
+            </a>
+        </div>
+    </div>
+
+    @if ($status)
+        <flux:callout variant="secondary" class="mt-4">{{ $status }}</flux:callout>
+    @endif
+
+    @if ($channel->hasRefreshError())
+        <flux:callout variant="danger" class="mt-4">
+            {{ __('The last refresh failed') }} — {{ $channel->last_refresh_error }}
+        </flux:callout>
+    @elseif ($channel->last_refreshed_at)
+        <flux:text size="sm" class="mt-4 block">
+            {{ __('Refreshed') }} {{ $channel->last_refreshed_at->diffForHumans() }}
+        </flux:text>
+    @endif
+
+    @if ($this->total > 0)
+        <div class="mt-6">
+            <flux:radio.group wire:model.live="filter" variant="segmented" size="sm">
+                <flux:radio value="all">{{ __('All') }}</flux:radio>
+                <flux:radio value="unwatched">{{ __('Unwatched') }}</flux:radio>
+            </flux:radio.group>
+        </div>
+    @endif
+
+    @if ($this->total === 0)
+        <div class="mt-16 text-center">
+            <flux:heading size="lg">{{ __('No videos yet.') }}</flux:heading>
+
+            <flux:text class="mt-2">
+                {{ __('Refresh to fetch this channel’s latest uploads.') }}
+            </flux:text>
+
+            <flux:button wire:click="refreshChannel" variant="primary" icon="arrow-path" class="mt-6">
+                {{ __('Refresh') }}
+            </flux:button>
+        </div>
+    @elseif ($videos->isEmpty())
+        <div class="mt-16 text-center">
+            <flux:heading size="lg">{{ __("You're all caught up.") }}</flux:heading>
+
+            <flux:button wire:click="$set('filter', 'all')" variant="subtle" class="mt-6">
+                {{ __('Show everything') }}
+            </flux:button>
+        </div>
+    @else
+        <div class="mt-6 grid grid-cols-1 gap-x-5 gap-y-8 md:grid-cols-2 xl:grid-cols-3">
+            @foreach ($videos as $video)
+                <livewire:video-card :video="$video" :wire:key="'card-'.$video->id" />
+            @endforeach
+        </div>
+
+        <div class="mt-10 flex flex-col items-center gap-3">
+            <flux:text size="sm">
+                {{ __('Showing') }} {{ $videos->firstItem() }}–{{ $videos->lastItem() }}
+                {{ __('of') }} {{ $videos->total() }}
+            </flux:text>
+
+            <div class="flex items-center gap-2">
+                <flux:button
+                    wire:click="previousPage"
+                    :disabled="$videos->onFirstPage()"
+                    variant="subtle"
+                    size="sm"
+                    icon="arrow-left"
+                >
+                    {{ __('Previous') }}
+                </flux:button>
+
+                <flux:button
+                    wire:click="nextPage"
+                    :disabled="! $videos->hasMorePages()"
+                    variant="subtle"
+                    size="sm"
+                    icon:trailing="arrow-right"
+                >
+                    {{ __('Next') }}
+                </flux:button>
+            </div>
+        </div>
+    @endif
+</section>
