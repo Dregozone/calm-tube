@@ -19,6 +19,11 @@ class FeedUnavailableException extends YouTubeException
         return new self("This channel's feed no longer exists ({$channelId}).");
     }
 
+    public static function disabled(string $channelId): self
+    {
+        return new self("The RSS feed is turned off, so {$channelId} uses the uploads playlist.");
+    }
+
     public static function unreadable(string $channelId): self
     {
         return new self("The feed for {$channelId} wasn't a YouTube feed.");

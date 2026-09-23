@@ -165,6 +165,8 @@ describe('refreshing', function (): void {
 
     it('reports a channel that failed without hiding the ones that worked', function (): void {
         Storage::fake('local');
+        // No key, so the unreachable feed has no uploads playlist to fall back to.
+        config()->set('calm-tube.api_key');
         fakeFeedFailure();
         calmChannel();
 
@@ -210,4 +212,36 @@ it('redirects a guest to the login page', function (): void {
     auth()->logout();
 
     $this->get(route('feed'))->assertRedirect(route('login'));
+});
+
+describe('remembering the filter', function (): void {
+    it('picks up the filter it was last left on', function (): void {
+        session()->put('calm-tube.feed.filter', 'unwatched');
+
+        Livewire::withQueryParams([])
+            ->test('pages::feed')
+            ->assertSet('filter', 'unwatched');
+    });
+
+    it('lets the url win over what was remembered', function (): void {
+        session()->put('calm-tube.feed.filter', 'unwatched');
+
+        Livewire::withQueryParams(['filter' => 'all'])
+            ->test('pages::feed')
+            ->assertSet('filter', 'all');
+    });
+
+    it('remembers a filter as soon as it changes', function (): void {
+        Livewire::test('pages::feed')->set('filter', 'unwatched');
+
+        expect(session('calm-tube.feed.filter'))->toBe('unwatched');
+    });
+
+    it('remembers the channel filter too', function (): void {
+        $channel = calmChannel();
+
+        Livewire::test('pages::feed')->set('channel', $channel->youtube_channel_id);
+
+        expect(session('calm-tube.feed.channel'))->toBe($channel->youtube_channel_id);
+    });
 });

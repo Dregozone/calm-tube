@@ -221,3 +221,51 @@ describe('the player script', function (): void {
             ->assertSee('new YT.Player(frame', escape: false);
     });
 });
+
+describe('returning to the feed', function (): void {
+    it('counts down before leaving, so the exit is automatic but never the arrival', function (): void {
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('Returning to your videos in', escape: false)
+            ->assertSee('id="calm-countdown"', escape: false)
+            ->assertSee('startCountdown', escape: false);
+    });
+
+    it('offers a way to stay, and stops counting when anything else is chosen', function (): void {
+        $video = watchable();
+
+        // Quotes arrive escaped inside Livewire's JSON payload, so the
+        // assertion looks for the identifiers rather than the exact source.
+        $this->get(route('videos.watch', $video))
+            ->assertSee('Stay here')
+            ->assertSee('calm-stay', escape: false)
+            ->assertSee('stopCountdown', escape: false);
+    });
+
+    it('returns to the feed filtered the way it was left', function (): void {
+        session()->put('calm-tube.feed.filter', 'unwatched');
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee(route('feed', ['filter' => 'unwatched']), escape: false);
+    });
+
+    it('carries the channel filter back too', function (): void {
+        session()->put('calm-tube.feed.filter', 'unwatched');
+        session()->put('calm-tube.feed.channel', CALM_CHANNEL_ID);
+        $video = watchable();
+
+        // Escaped, because the ampersand between the two parameters is
+        // written as an entity inside the attribute.
+        $this->get(route('videos.watch', $video))
+            ->assertSee(route('feed', ['filter' => 'unwatched', 'channel' => CALM_CHANNEL_ID]));
+    });
+
+    it('returns to the plain feed when no filter was in use', function (): void {
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee('data-return-url="'.route('feed').'"', escape: false);
+    });
+});

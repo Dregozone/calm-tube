@@ -26,9 +26,35 @@ new #[Title('Feed')] class extends Component
 
     public ?string $status = null;
 
+    /**
+     * Opened without filters in the URL, the feed picks up where you left off.
+     * Coming back from a video is the case that matters: watch something with
+     * the unwatched filter on and you should land back on the unwatched list,
+     * without the video you just finished.
+     */
+    public function mount(): void
+    {
+        if (! request()->has('filter')) {
+            $this->filter = (string) session('calm-tube.feed.filter', 'all');
+        }
+
+        if (! request()->has('channel')) {
+            $this->channel = (string) session('calm-tube.feed.channel', '');
+        }
+
+        $this->rememberFilters();
+    }
+
     public function updated(): void
     {
         $this->resetPage();
+        $this->rememberFilters();
+    }
+
+    private function rememberFilters(): void
+    {
+        session()->put('calm-tube.feed.filter', $this->filter);
+        session()->put('calm-tube.feed.channel', $this->channel);
     }
 
     #[On('feed-changed')]

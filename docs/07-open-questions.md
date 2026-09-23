@@ -103,11 +103,17 @@ official endpoint, so this stays unbuilt unless there's a case it can't handle.
 fine. If it ever isn't: drop archived images (not rows) for watched videos older than a year
 and fall back to hotlinking. The rows, titles and watch history would stay.
 
-### The 15-entry RSS window
+### The RSS feed may simply not be there
 
-A channel posting more than 15 videos between refreshes loses the overflow permanently.
-Hourly refreshes make this effectively impossible; if the schedule is ever relaxed to daily,
-it becomes a real (if unlikely) risk.
+Observed on 23 September 2026: `/feeds/videos.xml` returned `404` for all 26 followed
+channels and for YouTube's own channel, from a browser as well as from the app. Reports of
+intermittent 404s go back to late 2025 and there is no deprecation notice, so it may return.
+
+The app now falls back to the uploads playlist, so a dead feed costs quota rather than
+videos. The residual risk is that **discovery now needs an API key**: without one there is no
+feed and no fallback, and nothing new arrives. If YouTube removes the feed for good, the
+honest move is to make the uploads playlist the primary path and stop pretending the no-key
+mode discovers anything.
 
 ---
 

@@ -95,6 +95,13 @@ Failure modes surface as typed exceptions (`UnresolvableChannelException`,
 Sends conditional request headers (`If-None-Match` / `If-Modified-Since`) built from values
 stored on the channel, and treats a `304` as "nothing changed", skipping all downstream work.
 
+**It cannot be relied on.** The endpoint has answered `404` for every channel since 23
+September 2026, a recurring fault rather than an announced removal. When it fails, the refresh
+falls back to `ChannelBackfiller` walking the uploads playlist, which lists the same uploads
+for one quota unit. `calm-tube.refresh.try_feed` turns the attempt off entirely if it stays
+down; leaving it on costs one quick 404 per channel and picks the free path back up the moment
+YouTube restores it. Without an API key there is no fallback, and the refresh fails as before.
+
 ### `DataApiClient`
 
 Thin wrapper over the only two Data API v3 endpoints used:

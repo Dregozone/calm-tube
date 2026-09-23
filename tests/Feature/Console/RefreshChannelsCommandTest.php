@@ -64,13 +64,15 @@ it('reports how many new videos it found', function (): void {
 
 it('keeps refreshing after one channel fails', function (): void {
     Storage::fake('local');
+    // No key, so the unreachable feed has no uploads playlist to fall back to.
+    config()->set('calm-tube.api_key');
     calmChannel();
     Channel::factory()->create(['youtube_channel_id' => OTHER_CHANNEL_ID]);
     Http::fake([
         'www.youtube.com/feeds/videos.xml?channel_id='.CALM_CHANNEL_ID => Http::failedConnection(),
         'www.youtube.com/feeds/videos.xml*' => Http::response(youtubeFixture('feed-single-entry.xml')),
     ]);
-    fakeVideosList('videos.list-single.json');
+    fakeShortsProbe();
     fakeThumbnailDownloads();
 
     $this->artisan('calm:refresh')->assertSuccessful();

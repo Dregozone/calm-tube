@@ -27,6 +27,8 @@ it('passes the trigger through to the refresh run', function (): void {
 });
 
 it('does not throw when the refresh fails, so a run can continue', function (): void {
+    // No key, so the unreachable feed has nowhere to fall back to.
+    config()->set('calm-tube.api_key');
     fakeFeedFailure();
     $channel = calmChannel();
 

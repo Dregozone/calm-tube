@@ -19,8 +19,13 @@ official Data API v3, and one HTTP status code from the `/shorts/` URL.
 https://www.youtube.com/feeds/videos.xml?channel_id=UCMOqf8ab-42UUQIdVoKwjlQ
 ```
 
-An Atom feed of the channel's **15 most recent uploads**. No key, no quota, no auth. This is
-the discovery backbone; the API is only ever an enrichment step.
+An Atom feed of the channel's **15 most recent uploads**. No key, no quota, no auth.
+
+> **This endpoint is unreliable.** On 23 September 2026 it began answering `404` for every
+> channel, including YouTube's own, in a browser as well as from the app. It is a known,
+> recurring fault rather than an announced removal — reports of intermittent 404s go back to
+> late 2025. A refresh therefore falls back to the uploads playlist, at one quota unit per
+> channel, and returns to the feed automatically if it starts working again.
 
 ### Format
 

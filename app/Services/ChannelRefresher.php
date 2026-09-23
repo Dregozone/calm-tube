@@ -12,6 +12,7 @@ use App\Models\Video;
 use App\Services\YouTube\DataApiClient;
 use App\Services\YouTube\RssFeedClient;
 use App\Support\FeedEntry;
+use App\Support\FeedResponse;
 use App\Support\RefreshResult;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Log;
@@ -45,13 +46,9 @@ class ChannelRefresher
         $run = $this->startRun($channel, $trigger);
 
         try {
-            $feed = $this->feeds->fetch(
-                $channel->youtube_channel_id,
-                $channel->feed_etag,
-                $channel->feed_last_modified,
-            );
+            $feed = $this->fetchFeed($channel);
         } catch (FeedUnavailableException $exception) {
-            return $this->fail($channel, $run, $exception->getMessage());
+            return $this->refreshFromUploads($channel, $run, $exception);
         }
 
         $created = $feed->notModified
@@ -160,6 +157,56 @@ class ChannelRefresher
         $this->enricher->archiveThumbnails($created);
 
         return $degradedBecause;
+    }
+
+    /**
+     * @throws FeedUnavailableException
+     */
+    private function fetchFeed(Channel $channel): FeedResponse
+    {
+        if (! config('calm-tube.refresh.try_feed')) {
+            throw FeedUnavailableException::disabled($channel->youtube_channel_id);
+        }
+
+        return $this->feeds->fetch(
+            $channel->youtube_channel_id,
+            $channel->feed_etag,
+            $channel->feed_last_modified,
+        );
+    }
+
+    /**
+     * The uploads playlist holds the same uploads the feed would have listed,
+     * so an unreachable feed costs a quota unit rather than the refresh.
+     *
+     * Without an API key there is nowhere else to look, and the refresh fails
+     * as it did before.
+     */
+    private function refreshFromUploads(
+        Channel $channel,
+        RefreshRun $run,
+        FeedUnavailableException $exception,
+    ): RefreshResult {
+        if (! $this->api->isConfigured()) {
+            return $this->fail($channel, $run, $exception->getMessage());
+        }
+
+        Log::channel('calm')->warning('Feed unavailable, using the uploads playlist', [
+            'channel_id' => $channel->youtube_channel_id,
+            'reason' => $exception->getMessage(),
+        ]);
+
+        $recovered = $this->backfiller->backfill($channel, self::OVERFLOW_LIMIT, untilKnown: true);
+
+        $channel->forceFill([
+            // Validators belong to a feed that did not answer.
+            'feed_etag' => null,
+            'feed_last_modified' => null,
+            'last_refreshed_at' => now(),
+            'last_refresh_error' => null,
+        ])->save();
+
+        return $this->finish($run, RefreshResult::ok($recovered->count()));
     }
 
     /**

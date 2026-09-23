@@ -28,6 +28,11 @@ return [
     */
 
     'refresh' => [
+        // YouTube's RSS feed is free and unmetered, but it has been answering
+        // 404 intermittently since late 2025, so a refresh falls back to the
+        // uploads playlist when it does. Turn this off to skip the feed
+        // entirely if it stays down, at one quota unit per channel per refresh.
+        'try_feed' => env('CALM_TUBE_TRY_FEED', true),
         'timeout' => 10,
         'retries' => 2,
         'retry_delay' => 1000,

@@ -73,6 +73,22 @@ new #[Title('Watch')] class extends Component
         ]);
     }
 
+    /**
+     * Back to the list you came from, filtered the way you left it, as a full
+     * page visit so a video just marked watched is gone from an unwatched
+     * list rather than lingering in a cached grid.
+     */
+    public function returnUrl(): string
+    {
+        $filter = (string) session('calm-tube.feed.filter', 'all');
+        $channel = (string) session('calm-tube.feed.channel', '');
+
+        return route('feed', array_filter([
+            'filter' => $filter === 'all' ? null : $filter,
+            'channel' => $channel === '' ? null : $channel,
+        ]));
+    }
+
     public function watchOnYouTubeUrl(): string
     {
         return 'https://www.youtube.com/watch?v='.$this->video->youtube_video_id;
@@ -114,8 +130,15 @@ new #[Title('Watch')] class extends Component
             <div
                 id="calm-ended"
                 class="absolute inset-0 z-10 hidden flex-col items-center justify-center gap-3 bg-zinc-950/95 p-8 text-center"
+                data-return-url="{{ $this->returnUrl() }}"
             >
                 <flux:heading size="lg" class="text-white">{{ __('Finished.') }}</flux:heading>
+
+                {{-- Leaving is automatic, arriving somewhere new never is. Any
+                     button below stops the countdown. --}}
+                <flux:text id="calm-countdown" class="text-white/70">
+                    {{ __('Returning to your videos in') }} <span id="calm-countdown-seconds">3</span>…
+                </flux:text>
 
                 <div class="mt-2 flex flex-col items-center gap-2">
                     <flux:button :href="route('feed')" wire:navigate variant="primary" size="sm">
@@ -138,6 +161,10 @@ new #[Title('Watch')] class extends Component
 
                     <flux:button id="calm-replay" variant="subtle" size="sm" class="!text-white">
                         {{ __('Replay') }}
+                    </flux:button>
+
+                    <flux:button id="calm-stay" variant="ghost" size="xs" class="!text-white/60">
+                        {{ __('Stay here') }}
                     </flux:button>
                 </div>
             </div>
@@ -227,6 +254,40 @@ new #[Title('Watch')] class extends Component
         const reveal = (panel) => panel?.classList.replace('hidden', 'flex');
         const conceal = (panel) => panel?.classList.replace('flex', 'hidden');
 
+        let countdown = null;
+
+        const stopCountdown = () => {
+            clearTimeout(countdown);
+            countdown = null;
+            document.getElementById('calm-countdown')?.classList.add('hidden');
+        };
+
+        const startCountdown = () => {
+            const label = document.getElementById('calm-countdown-seconds');
+            const returnUrl = ended?.dataset.returnUrl;
+            let remaining = 3;
+
+            const tick = () => {
+                if (label) {
+                    label.textContent = remaining;
+                }
+
+                if (remaining <= 0) {
+                    window.location.assign(returnUrl);
+
+                    return;
+                }
+
+                remaining--;
+                countdown = setTimeout(tick, 1000);
+            };
+
+            tick();
+        };
+
+        // Choosing anything else is a decision to stay.
+        ended?.addEventListener('click', stopCountdown);
+
         const boot = () => {
             const player = new YT.Player(frame, {
                 events: {
@@ -234,10 +295,12 @@ new #[Title('Watch')] class extends Component
                         if (event.data === YT.PlayerState.ENDED) {
                             reveal(ended);
                             $wire.markWatched();
+                            startCountdown();
                         }
 
                         if (event.data === YT.PlayerState.PLAYING) {
                             conceal(ended);
+                            stopCountdown();
                         }
                     },
                     onError(event) {
@@ -253,10 +316,13 @@ new #[Title('Watch')] class extends Component
             });
 
             document.getElementById('calm-replay')?.addEventListener('click', () => {
+                stopCountdown();
                 conceal(ended);
                 player.seekTo(0);
                 player.playVideo();
             });
+
+            document.getElementById('calm-stay')?.addEventListener('click', stopCountdown);
         };
 
         if (window.YT && window.YT.Player) {

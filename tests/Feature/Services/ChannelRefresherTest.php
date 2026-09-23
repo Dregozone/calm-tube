@@ -255,6 +255,16 @@ describe('degrading without the API', function (): void {
 });
 
 describe('failures', function (): void {
+    /*
+     * A feed failure alone no longer fails a refresh: it falls back to the
+     * uploads playlist. These cover the case where there is no API key, and
+     * so nowhere else to look.
+     */
+
+    beforeEach(function (): void {
+        config()->set('calm-tube.api_key');
+    });
+
     it('reports a failure and stores the error when the feed cannot be reached', function (): void {
         $channel = calmChannel(['last_refresh_error' => null]);
         fakeFeedFailure();
@@ -278,6 +288,7 @@ describe('failures', function (): void {
 
     it('clears a previous error after a successful refresh', function (): void {
         Storage::fake('local');
+        config()->set('calm-tube.api_key', 'test-api-key');
         $channel = Channel::factory()->failing()->create(['youtube_channel_id' => CALM_CHANNEL_ID]);
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
 
@@ -306,6 +317,8 @@ describe('refresh runs', function (): void {
     });
 
     it('records the outcome of a failed refresh', function (): void {
+        // No key, so the feed failure has nowhere to fall back to.
+        config()->set('calm-tube.api_key');
         fakeFeedFailure();
 
         $this->refresher->refresh(calmChannel());
@@ -385,5 +398,97 @@ describe('recovering an overflowed feed', function (): void {
         $this->refresher->refresh($channel);
 
         expect(requestsTo('playlistItems'))->toBe(0);
+    });
+});
+
+describe('when the feed is unavailable', function (): void {
+    /*
+     * YouTube's RSS endpoint has answered 404 intermittently since late 2025,
+     * and did so for every channel at once. The uploads playlist lists the
+     * same uploads, so an unreachable feed should cost a quota unit rather
+     * than the refresh.
+     */
+
+    it('falls back to the uploads playlist when the feed 404s', function (): void {
+        Storage::fake('local');
+        fakeFeed('feed.xml', 404);
+        fakeUploadsPlaylist('playlist-items-page2.json');
+        fakeVideosList('videos.list-empty.json');
+        fakeThumbnailDownloads();
+        $channel = calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ']);
+
+        $result = $this->refresher->refresh($channel);
+
+        expect($result->status)->toBe(RefreshStatus::Ok)
+            ->and($result->newVideos)->toBe(30)
+            ->and($channel->fresh()->last_refresh_error)->toBeNull()
+            ->and($channel->fresh()->last_refreshed_at)->not->toBeNull();
+    });
+
+    it('falls back when the feed cannot be reached at all', function (): void {
+        Storage::fake('local');
+        fakeFeedFailure();
+        fakeUploadsPlaylist('playlist-items-page2.json');
+        fakeVideosList('videos.list-empty.json');
+        fakeThumbnailDownloads();
+
+        $result = $this->refresher->refresh(
+            calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ'])
+        );
+
+        expect($result->newVideos)->toBe(30);
+    });
+
+    it('stops at the first video it already has, so the fallback stays cheap', function (): void {
+        Storage::fake('local');
+        fakeFeed('feed.xml', 404);
+        fakeUploadsPlaylist();
+        fakeVideosList('videos.list-empty.json');
+        fakeThumbnailDownloads();
+        $channel = calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ']);
+        Video::factory()->for($channel)->create(['youtube_video_id' => 'bkfilvid003']);
+
+        $result = $this->refresher->refresh($channel);
+
+        expect($result->newVideos)->toBe(2)
+            ->and(requestsTo('playlistItems'))->toBe(1);
+    });
+
+    it('still fails when there is no API key to fall back on', function (): void {
+        config()->set('calm-tube.api_key');
+        fakeFeed('feed.xml', 404);
+        $channel = calmChannel();
+
+        $result = $this->refresher->refresh($channel);
+
+        expect($result->status)->toBe(RefreshStatus::Failed)
+            ->and($channel->fresh()->last_refresh_error)->not->toBeNull();
+    });
+
+    it('skips the feed entirely when it has been turned off', function (): void {
+        Storage::fake('local');
+        config()->set('calm-tube.refresh.try_feed', false);
+        fakeUploadsPlaylist('playlist-items-page2.json');
+        fakeVideosList('videos.list-empty.json');
+        fakeThumbnailDownloads();
+
+        $result = $this->refresher->refresh(
+            calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ'])
+        );
+
+        expect($result->newVideos)->toBe(30)
+            ->and(requestsTo('feeds/videos.xml'))->toBe(0);
+    });
+
+    it('does not fall back when the feed simply had nothing new', function (): void {
+        fakeFeed('feed.xml', 304);
+
+        $result = $this->refresher->refresh(
+            calmChannel(['feed_etag' => '"abc123"', 'uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ'])
+        );
+
+        expect($result->newVideos)->toBe(0)
+            ->and($result->status)->toBe(RefreshStatus::Ok)
+            ->and(requestsTo('playlistItems'))->toBe(0);
     });
 });
