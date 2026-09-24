@@ -191,6 +191,10 @@ return [
         // A fresh session opens on what you have not seen rather than on the
         // whole archive. Whichever you last chose is remembered after that.
         'default_filter' => 'unwatched',
+
+        // Snoozing a channel keeps what is already here and lets nothing it
+        // publishes over this many days into the feed, ever.
+        'snooze_days' => 7,
     ],
 
 ];

@@ -561,6 +561,18 @@ deliberately *not* by `scopeViewable()`, so a set-aside video stays on its chann
 its own filter tab there, and is one click away. The feed says what the rule did rather than
 quietly dropping things.
 
+### Snoozing a channel
+
+**Snooze** (video card, the channel list's menu, the channel page) is for a channel you
+don't want to hear from *right now*. What is already in the feed stays. Anything the channel
+publishes over the next `calm-tube.feed.snooze_days` (7) is still archived but stamped
+`videos.snoozed_at`, which `scopeViewable()` excludes, so it never reaches the feed or the
+channel page, and never takes a place under a sample limit. That stays true after the snooze
+ends, including for a video from the snoozed window that a later refresh only just found:
+the window is kept on the channel (`snoozed_from`, `snoozed_until`) and checked when a video
+is created. Refreshes carry on as normal throughout, so nothing about the archive changes.
+"Wake up" ends it early. Snoozing again extends it from now.
+
 ### Picking a channel's week
 
 For a channel where even one or two a day is too many, `channels.sample_period = week` changes

@@ -38,6 +38,7 @@ use Illuminate\Support\Facades\Storage;
  * @property CarbonImmutable|null $hidden_at
  * @property CarbonImmutable|null $sampled_out_at
  * @property string|null $pick_reason
+ * @property CarbonImmutable|null $snoozed_at
  * @property CarbonImmutable|null $unavailable_at
  * @property CarbonImmutable|null $enriched_at
  * @property CarbonImmutable|null $created_at
@@ -66,6 +67,7 @@ use Illuminate\Support\Facades\Storage;
     'hidden_at',
     'sampled_out_at',
     'pick_reason',
+    'snoozed_at',
     'unavailable_at',
     'enriched_at',
 ])]
@@ -82,6 +84,14 @@ class Video extends Model
 
     protected static function booted(): void
     {
+        // Stamped here rather than by each caller, so every way a video can
+        // arrive (refresh, overflow recovery, backfill) respects a snooze.
+        static::creating(function (Video $video): void {
+            if ($video->snoozed_at === null && $video->channel->wasSnoozedAt($video->published_at)) {
+                $video->snoozed_at = now();
+            }
+        });
+
         static::deleting(function (Video $video): void {
             $video->deleteArchivedThumbnail();
         });
@@ -127,6 +137,8 @@ class Video extends Model
     public function scopeViewable(Builder $query): void
     {
         $query->whereNull('hidden_at')
+            // Published while its channel was snoozed: kept, never shown.
+            ->whereNull('snoozed_at')
             ->whereNull('unavailable_at')
             ->where('live_status', LiveStatus::None)
             ->where(fn (Builder $shortsQuery): Builder => $shortsQuery
@@ -321,6 +333,7 @@ class Video extends Model
             'watched_at' => 'datetime',
             'hidden_at' => 'datetime',
             'sampled_out_at' => 'datetime',
+            'snoozed_at' => 'datetime',
             'unavailable_at' => 'datetime',
             'enriched_at' => 'datetime',
             'duration_seconds' => 'integer',

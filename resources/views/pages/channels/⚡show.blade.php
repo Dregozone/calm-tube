@@ -65,6 +65,22 @@ new class extends Component
         $this->resetPage();
     }
 
+    public function snooze(): void
+    {
+        $this->channel->snooze();
+        $this->status = __('Snoozed until :date. What is already here stays; nothing published until then will reach your feed.', [
+            'date' => $this->channel->snoozed_until?->format('D j M'),
+        ]);
+        $this->undoable = [];
+    }
+
+    public function wake(): void
+    {
+        $this->channel->wake();
+        $this->status = __('Awake. New uploads reach your feed again; anything published while it slept stays out.');
+        $this->undoable = [];
+    }
+
     /**
      * Declares a channel finished with, in one action rather than fifty.
      *
@@ -190,6 +206,10 @@ new class extends Component
                         · {{ $channel->handle }}
                     @endif
 
+                    @if ($channel->isSnoozed())
+                        · {{ __('snoozed until :date', ['date' => $channel->snoozed_until->format('D j M')]) }}
+                    @endif
+
                     @unless ($channel->is_enabled)
                         · {{ __('disabled, hidden from your feed') }}
                     @endunless
@@ -198,6 +218,16 @@ new class extends Component
         </div>
 
         <div class="flex items-center gap-2">
+            @if ($channel->isSnoozed())
+                <flux:button wire:click="wake" icon="sun" variant="subtle" size="sm">
+                    <span class="hidden sm:inline">{{ __('Wake up') }}</span>
+                </flux:button>
+            @else
+                <flux:button wire:click="snooze" icon="moon" variant="subtle" size="sm">
+                    <span class="hidden sm:inline">{{ __('Snooze :days days', ['days' => config('calm-tube.feed.snooze_days')]) }}</span>
+                </flux:button>
+            @endif
+
             <flux:button
                 wire:click="refreshChannel"
                 icon="arrow-path"

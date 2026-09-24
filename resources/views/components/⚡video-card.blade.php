@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Video;
+use Flux\Flux;
 use Livewire\Component;
 
 new class extends Component
@@ -17,6 +18,23 @@ new class extends Component
     public function hide(): void
     {
         $this->video->forceFill(['hidden_at' => now()])->save();
+
+        $this->dispatch('feed-changed');
+    }
+
+    /**
+     * Right where a noisy channel is noticed. What is already in the feed
+     * stays; nothing it publishes for the next week will join it.
+     */
+    public function snoozeChannel(): void
+    {
+        $channel = $this->video->channel;
+        $channel->snooze();
+
+        Flux::toast(text: __(':channel snoozed until :date. What is already here stays.', [
+            'channel' => $channel->display_name,
+            'date' => $channel->snoozed_until?->format('D j M'),
+        ]));
 
         $this->dispatch('feed-changed');
     }
@@ -85,6 +103,18 @@ new class extends Component
                 <flux:icon.x-mark variant="micro" />
                 {{ __('Hide') }}
             </button>
+
+            @unless ($video->channel->isSnoozed())
+                <button
+                    type="button"
+                    wire:click="snoozeChannel"
+                    class="inline-flex items-center gap-1 rounded-md bg-black/80 px-2.5 py-1.5 text-xs font-medium text-white hover:bg-black"
+                    title="{{ __('Nothing new from :channel for :days days', ['channel' => $video->channel->display_name, 'days' => config('calm-tube.feed.snooze_days')]) }}"
+                >
+                    <flux:icon.moon variant="micro" />
+                    {{ __('Snooze') }}
+                </button>
+            @endunless
         </div>
     </div>
 

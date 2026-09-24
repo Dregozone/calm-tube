@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\SamplePeriod;
 use Carbon\CarbonImmutable;
+use Carbon\CarbonInterface;
 use Database\Factories\ChannelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Builder;
@@ -31,6 +32,8 @@ use Illuminate\Support\Facades\Storage;
  * @property int|null $sample_limit
  * @property SamplePeriod $sample_period
  * @property string|null $sample_note
+ * @property CarbonImmutable|null $snoozed_from
+ * @property CarbonImmutable|null $snoozed_until
  * @property string|null $feed_etag
  * @property string|null $feed_last_modified
  * @property CarbonImmutable|null $last_refreshed_at
@@ -54,6 +57,8 @@ use Illuminate\Support\Facades\Storage;
     'sample_limit',
     'sample_period',
     'sample_note',
+    'snoozed_from',
+    'snoozed_until',
     'feed_etag',
     'feed_last_modified',
     'last_refreshed_at',
@@ -166,6 +171,49 @@ class Channel extends Model
         return $this->isSampled() && $this->sample_period === SamplePeriod::Week;
     }
 
+    /**
+     * Nothing new from this channel reaches the feed until the snooze ends.
+     */
+    public function isSnoozed(): bool
+    {
+        return $this->snoozed_until !== null && $this->snoozed_until->isFuture();
+    }
+
+    /**
+     * Whether a video published at this moment fell inside the last snooze,
+     * however late it was discovered.
+     */
+    public function wasSnoozedAt(CarbonInterface $publishedAt): bool
+    {
+        return $this->snoozed_from !== null
+            && $this->snoozed_until !== null
+            && $publishedAt->gte($this->snoozed_from)
+            && $publishedAt->lt($this->snoozed_until);
+    }
+
+    /**
+     * What is already here stays; what is published from now until the snooze
+     * ends never reaches the feed. Snoozing again extends it from now, keeping
+     * the original start.
+     */
+    public function snooze(?int $days = null): void
+    {
+        $this->forceFill([
+            'snoozed_from' => $this->isSnoozed() ? $this->snoozed_from : now(),
+            'snoozed_until' => now()->addDays($days ?? (int) config('calm-tube.feed.snooze_days')),
+        ])->save();
+    }
+
+    /**
+     * Ends a snooze early. What was published during it stays out.
+     */
+    public function wake(): void
+    {
+        if ($this->isSnoozed()) {
+            $this->forceFill(['snoozed_until' => now()])->save();
+        }
+    }
+
     public function hasRefreshError(): bool
     {
         return $this->last_refresh_error !== null;
@@ -183,6 +231,8 @@ class Channel extends Model
             'sample_limit' => 'integer',
             'sample_period' => SamplePeriod::class,
             'last_refreshed_at' => 'datetime',
+            'snoozed_from' => 'datetime',
+            'snoozed_until' => 'datetime',
         ];
     }
 }

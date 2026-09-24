@@ -114,6 +114,22 @@ new #[Title('Channels')] class extends Component
             : "{$channel->display_name} is hidden from your feed. Nothing was deleted.");
     }
 
+    public function snooze(int $channelId): void
+    {
+        $channel = Channel::findOrFail($channelId);
+        $channel->snooze();
+
+        session()->flash('status', "{$channel->display_name} is snoozed until {$channel->snoozed_until?->format('D j M')}. What is already in your feed stays.");
+    }
+
+    public function wake(int $channelId): void
+    {
+        $channel = Channel::findOrFail($channelId);
+        $channel->wake();
+
+        session()->flash('status', "{$channel->display_name} is awake. Anything published while it slept stays out.");
+    }
+
     public function edit(int $channelId): void
     {
         $channel = Channel::findOrFail($channelId);
@@ -347,6 +363,9 @@ new #[Title('Channels')] class extends Component
                                 · {{ __('keeping :n a day', ['n' => $channel->sample_limit]) }}
                                 ({{ $channel->set_aside_count }} {{ __('set aside') }})
                             @endif
+                            @if ($channel->isSnoozed())
+                                · {{ __('snoozed until :date', ['date' => $channel->snoozed_until->format('D j M')]) }}
+                            @endif
                             @unless ($channel->is_enabled)
                                 · {{ __('disabled, hidden from your feed') }}
                             @endunless
@@ -385,6 +404,16 @@ new #[Title('Channels')] class extends Component
                             <flux:menu.item icon="pencil-square" wire:click="edit({{ $channel->id }})">
                                 {{ __('Edit') }}
                             </flux:menu.item>
+
+                            @if ($channel->isSnoozed())
+                                <flux:menu.item icon="sun" wire:click="wake({{ $channel->id }})">
+                                    {{ __('Wake up') }}
+                                </flux:menu.item>
+                            @else
+                                <flux:menu.item icon="moon" wire:click="snooze({{ $channel->id }})">
+                                    {{ __('Snooze for :days days', ['days' => config('calm-tube.feed.snooze_days')]) }}
+                                </flux:menu.item>
+                            @endif
 
                             <flux:menu.item
                                 :icon="$channel->is_enabled ? 'eye-slash' : 'eye'"
