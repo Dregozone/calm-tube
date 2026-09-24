@@ -50,7 +50,7 @@ return [
         // Opening a feed nobody has refreshed for this long refreshes it,
         // after the page has rendered, so the app stays current without a
         // scheduler running in the background. 0 turns it off.
-        'auto_after_hours' => env('CALM_TUBE_AUTO_REFRESH_HOURS', 6),
+        'auto_after_hours' => env('CALM_TUBE_AUTO_REFRESH_HOURS', 2),
     ],
 
     /*
