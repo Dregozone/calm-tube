@@ -203,6 +203,15 @@ describe('listing channels', function (): void {
             ->assertDontSee(CALM_CHANNEL_TITLE);
     });
 
+    it('lists channels alphabetically by the name you see', function (): void {
+        Channel::factory()->create(['title' => 'Zebra Talks', 'custom_name' => 'aardvark']);
+        Channel::factory()->create(['title' => 'Middle Channel']);
+        Channel::factory()->create(['title' => 'Apple Talks', 'custom_name' => 'Zulu']);
+
+        Livewire::test('pages::channels.index')
+            ->assertSeeInOrder(['aardvark', 'Middle Channel', 'Zulu']);
+    });
+
     it('shows when each channel was last refreshed', function (): void {
         $this->travelTo('2026-03-15 12:00:00');
         calmChannel(['last_refreshed_at' => now()->subMinutes(14)]);

@@ -269,13 +269,16 @@ new #[Title('Channels')] class extends Component
                     // row is the number of cards you would actually see.
                     'videos as unwatched_count' => fn ($query) => $query->viewable()->unwatched(),
                 ])
-                ->orderBy('title')
-                ->get(),
+                ->get()
+                // By the name you see, which may be your own rather than
+                // YouTube's, so a renamed channel sits where you look for it.
+                ->sortBy(fn (Channel $channel): string => mb_strtolower($channel->display_name))
+                ->values(),
         ];
     }
 }; ?>
 
-<section class="mx-auto w-full max-w-4xl px-4 py-8">
+<section class="mx-auto w-full max-w-7xl px-4 py-8">
     <div class="flex items-start justify-between gap-4">
         <flux:heading size="xl" level="1">{{ __('Channels') }}</flux:heading>
 
@@ -320,14 +323,64 @@ new #[Title('Channels')] class extends Component
             {{ __('You are not following any channels yet.') }}
         </flux:text>
     @else
-        <flux:text size="sm" class="mt-8 block">
-            {{ $channels->count() }} {{ Str::plural('channel', $channels->count()) }} ·
-            {{ $channels->where('is_enabled', true)->count() }} {{ __('enabled') }}
-        </flux:text>
+        {{-- Filtered in the browser: the list is already here, so narrowing it
+             needs no round trip. A * matches anything, so "big*think" works. --}}
+        <div
+            x-data="{
+                search: '',
+                names: @js($channels->map(fn ($channel) => mb_strtolower($channel->display_name.' '.$channel->handle))->all()),
+                matches(name) {
+                    const term = this.search.trim().toLowerCase();
 
-        <ul class="mt-3 divide-y divide-zinc-200 rounded-xl border border-zinc-200 dark:divide-zinc-700 dark:border-zinc-700">
+                    if (term === '') {
+                        return true;
+                    }
+
+                    const pattern = term.split('*')
+                        .map((part) => part.replace(/[.+?^${}()|[\]\\]/g, '\\$&'))
+                        .join('.*');
+
+                    return new RegExp(pattern).test(name);
+                },
+                get matching() {
+                    return this.names.filter((name) => this.matches(name)).length;
+                },
+            }"
+            class="mt-8"
+        >
+            <div class="flex flex-wrap items-center justify-between gap-3">
+                <flux:text size="sm">
+                    {{ $channels->count() }} {{ Str::plural('channel', $channels->count()) }} ·
+                    {{ $channels->where('is_enabled', true)->count() }} {{ __('enabled') }}
+                    <span x-show="search.trim() !== ''" x-cloak>
+                        · <span x-text="matching"></span> {{ __('matching') }}
+                    </span>
+                </flux:text>
+
+                <div class="w-full sm:w-72">
+                    <flux:input
+                        x-model="search"
+                        @keydown.escape="search = ''"
+                        icon="magnifying-glass"
+                        size="sm"
+                        :placeholder="__('Filter channels')"
+                        :aria-label="__('Filter channels')"
+                        clearable
+                    />
+                </div>
+            </div>
+
+            <flux:text x-show="matching === 0" x-cloak class="mt-6 block text-center">
+                {{ __('No channels match') }} “<span x-text="search.trim()"></span>”.
+            </flux:text>
+
+        <ul class="mt-3 gap-3 md:columns-2 xl:columns-3">
             @foreach ($channels as $channel)
-                <li class="flex items-center gap-3 p-4 sm:gap-4 {{ $channel->is_enabled ? '' : 'opacity-60' }}" wire:key="channel-{{ $channel->id }}">
+                <li
+                    class="mb-3 flex break-inside-avoid items-center gap-3 rounded-xl border border-zinc-200 p-4 dark:border-zinc-700 {{ $channel->is_enabled ? '' : 'opacity-60' }}"
+                    wire:key="channel-{{ $channel->id }}"
+                    x-show="matches(@js(mb_strtolower($channel->display_name.' '.$channel->handle)))"
+                >
                     <img
                         src="{{ route('avatars.show', $channel) }}"
                         alt=""
@@ -339,7 +392,7 @@ new #[Title('Channels')] class extends Component
                             <flux:heading>{{ $channel->display_name }}</flux:heading>
                         </a>
 
-                        <flux:text size="sm" class="truncate">
+                        <flux:text size="sm">
                             @if ($channel->unwatched_count > 0)
                                 {{ $channel->unwatched_count.' '.__('unwatched') }}
                                 · {{ $channel->videos_count }} {{ Str::plural('video', $channel->videos_count) }}
@@ -432,6 +485,7 @@ new #[Title('Channels')] class extends Component
                 </li>
             @endforeach
         </ul>
+        </div>
     @endif
 
     <flux:modal wire:model.self="editOpen" class="w-full max-w-md">
