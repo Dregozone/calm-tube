@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\SamplePeriod;
 use App\Enums\RefreshTrigger;
 use App\Exceptions\YouTubeException;
 use App\Jobs\RefreshChannel;
@@ -32,8 +33,14 @@ new #[Title('Channels')] class extends Component
     /** Seconds of sponsor plug at the end of every video; empty means none. */
     public string $outroSeconds = '';
 
-    /** Uploads a day to keep from this channel; empty means all of them. */
+    /** Uploads a day or week to keep from this channel; empty means all of them. */
     public string $sampleLimit = '';
+
+    /** day | week */
+    public string $samplePeriod = 'day';
+
+    /** What you want from the channel, for the weekly pick to judge against. */
+    public string $sampleNote = '';
 
     public ?int $deletingId = null;
 
@@ -116,6 +123,8 @@ new #[Title('Channels')] class extends Component
         $this->playbackRate = $channel->playback_rate === null ? '' : (string) $channel->playback_rate;
         $this->outroSeconds = $channel->outro_seconds === null ? '' : (string) $channel->outro_seconds;
         $this->sampleLimit = $channel->sample_limit === null ? '' : (string) $channel->sample_limit;
+        $this->samplePeriod = $channel->sample_period->value;
+        $this->sampleNote = $channel->sample_note ?? '';
         $this->resetErrorBag();
         $this->editOpen = true;
     }
@@ -135,6 +144,8 @@ new #[Title('Channels')] class extends Component
             ],
             'outroSeconds' => ['nullable', 'integer', 'min:1', 'max:120'],
             'sampleLimit' => ['nullable', 'integer', 'min:1', 'max:50'],
+            'samplePeriod' => ['required', Rule::enum(SamplePeriod::class)],
+            'sampleNote' => ['nullable', 'string', 'max:2000'],
         ]);
 
         // An emptied field means "go back to what YouTube calls it", not an
@@ -144,6 +155,8 @@ new #[Title('Channels')] class extends Component
             'playback_rate' => $this->playbackRate === '' ? null : (float) $this->playbackRate,
             'outro_seconds' => $this->outroSeconds === '' ? null : (int) $this->outroSeconds,
             'sample_limit' => $this->sampleLimit === '' ? null : (int) $this->sampleLimit,
+            'sample_period' => SamplePeriod::from($this->samplePeriod),
+            'sample_note' => trim($this->sampleNote) === '' ? null : trim($this->sampleNote),
         ])->save();
 
         // Applied to what is already here, not only to the next refresh:
@@ -327,7 +340,10 @@ new #[Title('Channels')] class extends Component
                             @if ($channel->outro_seconds !== null)
                                 · {{ __('finishes :n s early', ['n' => $channel->outro_seconds]) }}
                             @endif
-                            @if ($channel->isSampled())
+                            @if ($channel->isPickedWeekly())
+                                · {{ __('picking :n a week', ['n' => $channel->sample_limit]) }}
+                                ({{ $channel->set_aside_count }} {{ __('held or set aside') }})
+                            @elseif ($channel->isSampled())
                                 · {{ __('keeping :n a day', ['n' => $channel->sample_limit]) }}
                                 ({{ $channel->set_aside_count }} {{ __('set aside') }})
                             @endif
@@ -428,18 +444,41 @@ new #[Title('Channels')] class extends Component
                 />
 
                 <flux:select
-                    wire:model="sampleLimit"
+                    wire:model.live="sampleLimit"
                     :label="__('How much of this channel reaches your feed')"
-                    :description="__('For channels that publish one real video and a pile of clips cut from it. The longest few of each day reach the feed; the rest stay on this channel\'s page. Nothing is deleted.')"
+                    :description="__('For channels that publish far more than you want to watch. The rest stay on the channel page. Nothing is deleted.')"
                 >
                     <flux:select.option value="">{{ __('Everything it publishes') }}</flux:select.option>
 
                     @foreach ([1, 2, 3, 5, 10] as $limit)
-                        <flux:select.option value="{{ $limit }}">
-                            {{ __('The :n longest a day', ['n' => $limit]) }}
-                        </flux:select.option>
+                        <flux:select.option value="{{ $limit }}">{{ $limit }}</flux:select.option>
                     @endforeach
                 </flux:select>
+
+                @if ($sampleLimit !== '')
+                    <flux:radio.group wire:model.live="samplePeriod" :label="__('Counted')">
+                        <flux:radio
+                            value="day"
+                            :label="__('A day, keeping the longest')"
+                            :description="__('For channels that publish one real video and a pile of clips cut from it.')"
+                        />
+                        <flux:radio
+                            value="week"
+                            :label="__('A week, picked for you')"
+                            :description="__('Uploads wait until the week is over, then a local AI model picks the ones most worth your time. It can pick fewer, or none.')"
+                        />
+                    </flux:radio.group>
+
+                    @if ($samplePeriod === 'week')
+                        <flux:textarea
+                            wire:model="sampleNote"
+                            rows="3"
+                            :label="__('What you want from this channel')"
+                            :placeholder="__('Long-form teaching on hiring, offers and pricing. Skip motivational one-liners.')"
+                            :description="__('The pick also learns from what you finish, abandon and hide here.')"
+                        />
+                    @endif
+                @endif
 
                 @error('sampleLimit')
                     <flux:text class="text-red-600 dark:text-red-400">{{ $message }}</flux:text>

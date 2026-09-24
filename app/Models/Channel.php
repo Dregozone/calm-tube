@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SamplePeriod;
 use Carbon\CarbonImmutable;
 use Database\Factories\ChannelFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -28,6 +29,8 @@ use Illuminate\Support\Facades\Storage;
  * @property float|null $playback_rate
  * @property int|null $outro_seconds
  * @property int|null $sample_limit
+ * @property SamplePeriod $sample_period
+ * @property string|null $sample_note
  * @property string|null $feed_etag
  * @property string|null $feed_last_modified
  * @property CarbonImmutable|null $last_refreshed_at
@@ -49,6 +52,8 @@ use Illuminate\Support\Facades\Storage;
     'playback_rate',
     'outro_seconds',
     'sample_limit',
+    'sample_period',
+    'sample_note',
     'feed_etag',
     'feed_last_modified',
     'last_refreshed_at',
@@ -86,6 +91,12 @@ class Channel extends Model
     public function videos(): HasMany
     {
         return $this->hasMany(Video::class);
+    }
+
+    /** @return HasMany<ChannelDigest, $this> */
+    public function digests(): HasMany
+    {
+        return $this->hasMany(ChannelDigest::class);
     }
 
     /** @return HasMany<RefreshRun, $this> */
@@ -147,6 +158,14 @@ class Channel extends Model
         return $this->sample_limit !== null;
     }
 
+    /**
+     * Uploads are held until the week is over, then the best few are picked.
+     */
+    public function isPickedWeekly(): bool
+    {
+        return $this->isSampled() && $this->sample_period === SamplePeriod::Week;
+    }
+
     public function hasRefreshError(): bool
     {
         return $this->last_refresh_error !== null;
@@ -162,6 +181,7 @@ class Channel extends Model
             'playback_rate' => 'float',
             'outro_seconds' => 'integer',
             'sample_limit' => 'integer',
+            'sample_period' => SamplePeriod::class,
             'last_refreshed_at' => 'datetime',
         ];
     }

@@ -135,11 +135,15 @@ mode discovers anything.
 
 ---
 
-## AI, deliberately out of scope
+## AI
 
-`laravel/ai` is installed for later. Nothing in Phases 0–10 uses it. The data model doesn't
-block any of the following, and none of them should be built until the core tool has been
-lived with:
+`laravel/ai` is wired to a local Ollama model. The first and only feature using it is the
+**weekly pick** ([04-routes-and-ui.md](04-routes-and-ui.md#picking-a-channels-week)), built
+after living with a channel that the daily length limit could not tame. It is a deliberate,
+narrow exception to the "worth my time?" warning below: it only ever *removes* from a channel
+you opted in, one week at a time, and everything it passes over stays on the channel page.
+
+The remaining ideas are still parked:
 
 | Idea | Note |
 | --- | --- |
@@ -149,8 +153,9 @@ lived with:
 | **"Is this worth my time?"** | A per-video relevance score. Tempting, and exactly the thing the app exists to escape — an algorithm deciding what gets attention. If ever built, it must rank nothing and reorder nothing; at most it annotates |
 | **Natural-language search** | "That video about bridge foundations" over your own archive. Low risk, purely retrospective, genuinely in the spirit of the tool |
 
-The principle: **AI may help you find something you already chose to follow. It must never
-choose for you.** Anything that scores, sorts or recommends fails that test.
+The principle: **AI may help you find something you already chose to follow, and may thin
+out a channel you asked it to thin out. It must never add to what you see or reorder it.**
+Anything that recommends, or that reaches beyond a channel's own uploads, fails that test.
 
 ---
 
@@ -182,4 +187,4 @@ So future sessions don't relitigate these:
 | Autoplay | The video you clicked plays. Nothing ever chooses the next one |
 | Staying current | Opening a stale feed refreshes it after render. No scheduler, no queue worker, nothing to remember to start |
 | Refresh counts | Report what reached the feed, not what was stored. Shorts are stored and never shown, so the two differ constantly |
-| AI | Out of scope for the initial build |
+| AI | Local Ollama only; weekly pick is the one use, and it only reduces |

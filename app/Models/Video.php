@@ -37,6 +37,7 @@ use Illuminate\Support\Facades\Storage;
  * @property CarbonImmutable|null $watched_at
  * @property CarbonImmutable|null $hidden_at
  * @property CarbonImmutable|null $sampled_out_at
+ * @property string|null $pick_reason
  * @property CarbonImmutable|null $unavailable_at
  * @property CarbonImmutable|null $enriched_at
  * @property CarbonImmutable|null $created_at
@@ -64,6 +65,7 @@ use Illuminate\Support\Facades\Storage;
     'watched_at',
     'hidden_at',
     'sampled_out_at',
+    'pick_reason',
     'unavailable_at',
     'enriched_at',
 ])]

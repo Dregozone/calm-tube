@@ -561,6 +561,27 @@ deliberately *not* by `scopeViewable()`, so a set-aside video stays on its chann
 its own filter tab there, and is one click away. The feed says what the rule did rather than
 quietly dropping things.
 
+### Picking a channel's week
+
+For a channel where even one or two a day is too many, `channels.sample_period = week` changes
+what the limit counts. Uploads are **held** (`sampled_out_at`) for the whole week, Monday to
+Sunday. The first refresh after the week closes puts it to the local model (`WeeklyPicks`,
+`App\Ai\Agents\WeeklyPicker`) with:
+
+- `channels.sample_note`: what you want from the channel, in your words;
+- the titles you finished, started but abandoned, and hid from it;
+- the week's uploads, numbered, with length, title and a trimmed description.
+
+It chooses **up to** the limit, fewer or none when the rest are weak. Picks are released with a
+one-sentence `videos.pick_reason`; the rest stay set aside. The decision is written to
+`channel_digests` once, so a week is never picked over twice and nothing changes under you.
+Videos you opened that week count against its budget and are never held.
+
+**Degrades, never blocks.** With Ollama not running, the week stays held and the next refresh
+asks again; after `calm-tube.weekly.grace_days` the longest are kept instead. Only the most
+recently closed week is ever put to the model. Older weeks, like a whole history when a
+channel is first switched to weekly, are settled by length without asking.
+
 ---
 
 ## Screen 4 — Channel page (`/channels/{channel}`)

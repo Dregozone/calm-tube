@@ -237,7 +237,11 @@ new class extends Component
 
     @if ($channel->isSampled())
         <flux:callout variant="secondary" class="mt-4">
-            {{ __('Keeping the :n longest uploads a day from this channel.', ['n' => $channel->sample_limit]) }}
+            @if ($channel->isPickedWeekly())
+                {{ __('Picking up to :n a week from this channel, once each week is over.', ['n' => $channel->sample_limit]) }}
+            @else
+                {{ __('Keeping the :n longest uploads a day from this channel.', ['n' => $channel->sample_limit]) }}
+            @endif
             {{ __(':aside of :total set aside — they are all still here, just not in your feed.', [
                 'aside' => $this->setAsideCount,
                 'total' => $this->total,

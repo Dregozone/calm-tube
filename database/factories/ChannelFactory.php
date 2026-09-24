@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\SamplePeriod;
 use App\Models\Channel;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Str;
@@ -30,6 +31,8 @@ class ChannelFactory extends Factory
             'playback_rate' => null,
             'outro_seconds' => null,
             'sample_limit' => null,
+            'sample_period' => SamplePeriod::Day,
+            'sample_note' => null,
             'feed_etag' => null,
             'feed_last_modified' => null,
             'last_refreshed_at' => now()->subMinutes(14),
@@ -43,6 +46,18 @@ class ChannelFactory extends Factory
     public function disabled(): static
     {
         return $this->state(fn (): array => ['is_enabled' => false]);
+    }
+
+    /**
+     * Uploads held until the week closes, then the best few picked.
+     */
+    public function pickedWeekly(int $limit = 2, ?string $note = 'Long-form business teaching.'): static
+    {
+        return $this->state(fn (): array => [
+            'sample_limit' => $limit,
+            'sample_period' => SamplePeriod::Week,
+            'sample_note' => $note,
+        ]);
     }
 
     public function neverRefreshed(): static

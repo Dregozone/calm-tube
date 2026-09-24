@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Channel;
 use App\Models\Video;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 
 /**
@@ -26,6 +27,8 @@ use Illuminate\Support\Facades\Log;
  */
 class ChannelSampler
 {
+    public function __construct(private readonly WeeklyPicks $weekly) {}
+
     /**
      * Applies the channel's limit to the days the given videos fall on.
      *
@@ -38,6 +41,12 @@ class ChannelSampler
     public function applyTo(Channel $channel, Collection $videos): void
     {
         if ($videos->isEmpty()) {
+            return;
+        }
+
+        if ($channel->isPickedWeekly()) {
+            $this->weekly->applyTo($channel, $videos);
+
             return;
         }
 
@@ -61,6 +70,13 @@ class ChannelSampler
             return $this->clear($channel);
         }
 
+        if ($channel->isPickedWeekly()) {
+            return $this->weekly->apply($channel, $days === null ? null : array_values(array_unique(array_map(
+                fn (string $day): string => Date::parse($day)->startOfWeek()->toDateString(),
+                $days,
+            ))));
+        }
+
         $setAside = 0;
 
         foreach ($this->days($channel, $days) as $day) {
@@ -76,6 +92,17 @@ class ChannelSampler
         }
 
         return $setAside;
+    }
+
+    /**
+     * Decides any week a weekly channel has finished, whether or not this
+     * refresh found anything new.
+     */
+    public function settle(Channel $channel): void
+    {
+        if ($channel->isPickedWeekly()) {
+            $this->weekly->settle($channel);
+        }
     }
 
     /**

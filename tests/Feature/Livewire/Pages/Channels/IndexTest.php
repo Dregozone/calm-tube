@@ -553,6 +553,42 @@ describe('sampling a noisy channel', function (): void {
             ->assertSee('11 set aside');
     });
 
+    it('saves a weekly pick with what you want from the channel', function (): void {
+        $channel = calmChannel();
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('sampleLimit', '2')
+            ->set('samplePeriod', 'week')
+            ->set('sampleNote', '  Long-form teaching on offers.  ')
+            ->call('save')
+            ->assertHasNoErrors();
+
+        $channel->refresh();
+
+        expect($channel->isPickedWeekly())->toBeTrue()
+            ->and($channel->sample_note)->toBe('Long-form teaching on offers.');
+    });
+
+    it('holds the current week as soon as a weekly pick is saved', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->create(['published_at' => now()]);
+
+        Livewire::test('pages::channels.index')
+            ->call('edit', $channel->id)
+            ->set('sampleLimit', '2')
+            ->set('samplePeriod', 'week')
+            ->call('save');
+
+        expect(Video::inFeed()->count())->toBe(0);
+    });
+
+    it('says on the row that a channel is picked weekly', function (): void {
+        calmChannel(['sample_limit' => 2, 'sample_period' => 'week']);
+
+        Livewire::test('pages::channels.index')->assertSee('picking 2 a week');
+    });
+
     it('says nothing about sampling on a channel that is not sampled', function (): void {
         calmChannel();
 

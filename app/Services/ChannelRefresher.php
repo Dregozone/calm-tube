@@ -67,6 +67,7 @@ class ChannelRefresher
         // After enrichment, because the rule ranks on duration and a video
         // with no duration yet is never set aside.
         $this->sampler->applyTo($channel, $stored);
+        $this->sampler->settle($channel);
 
         $channel->forceFill([
             'feed_etag' => $feed->etag,
@@ -210,6 +211,7 @@ class ChannelRefresher
         $recovered = $this->backfiller->backfill($channel, self::OVERFLOW_LIMIT, untilKnown: true);
 
         $this->sampler->applyTo($channel, $recovered);
+        $this->sampler->settle($channel);
 
         $reachedFeed = $this->reachedFeed($recovered);
 

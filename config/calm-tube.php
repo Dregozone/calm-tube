@@ -134,6 +134,49 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | AI
+    |--------------------------------------------------------------------------
+    |
+    | A local model through Ollama, so nothing leaves the machine and there is
+    | no key to keep. Like every other dependency it is optional: when Ollama
+    | is not running, whatever asked simply waits or falls back.
+    |
+    */
+
+    'ai' => [
+        'provider' => env('CALM_TUBE_AI_PROVIDER', 'ollama'),
+        'model' => env('CALM_TUBE_AI_MODEL', 'qwen3.5:4b'),
+
+        // A local model on a laptop is slow, and this runs inside a refresh.
+        'timeout' => 90,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Weekly Picks
+    |--------------------------------------------------------------------------
+    |
+    | A channel sampled by the week holds its uploads until the week closes
+    | (Monday to Sunday), then keeps the best few. The first refresh after the
+    | week ends asks the model. If it cannot answer, the week stays held and
+    | the next refresh asks again, until grace_days have passed, when the
+    | longest uploads are kept instead. Only the most recently closed week is
+    | ever put to the model; anything older is settled by length.
+    |
+    */
+
+    'weekly' => [
+        'grace_days' => 2,
+
+        // How much of your history with the channel the model is shown.
+        'history' => 15,
+
+        // Descriptions are trimmed to this before they reach the model.
+        'description_chars' => 400,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Feed
     |--------------------------------------------------------------------------
     |

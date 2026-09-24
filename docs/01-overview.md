@@ -31,7 +31,8 @@ has no multi-user story, and will never be deployed.
 - **No search across YouTube.** The app cannot discover a channel you haven't already chosen.
 - **No notifications, no badges, no unread counts on the tab title.**
 - **No multi-user, no sharing, no sync, no deployment.**
-- **No AI features for now.** The SDK is installed for later; candidate uses are parked in
+- **No AI that chooses what you see from outside what you follow.** The one AI feature, the
+  weekly pick, only thins out a channel you opted into; other ideas are parked in
   [07-open-questions.md](07-open-questions.md).
 
 ## Guiding principles

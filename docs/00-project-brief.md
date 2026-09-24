@@ -64,7 +64,10 @@ Settled — don't relitigate without a reason. Full list in
 - **Disable, not delete**, is the primary way to stop following a channel.
 - **Thumbnails archived locally** (`maxresdefault` → `mqdefault`) and served by a route, not
   `storage:link` — symlinks are a Windows trap.
-- **AI is out of scope** for the initial build, despite `laravel/ai` being installed.
+- **AI runs locally through Ollama** (`laravel/ai`, default `qwen3.5:4b`), no key, optional
+  like every other dependency. Its one job so far is the weekly pick: on a channel you have
+  switched to it, it may only *reduce* what that channel sends you. It never adds, reorders
+  or recommends. See [04-routes-and-ui.md](04-routes-and-ui.md#picking-a-channels-week).
 
 ## Conventions
 
