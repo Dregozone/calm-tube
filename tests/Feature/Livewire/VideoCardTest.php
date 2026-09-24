@@ -14,6 +14,14 @@ it('links to the watch page', function (): void {
         ->assertSee(route('videos.watch', $video), escape: false);
 });
 
+it('links the channel name to the channel page', function (): void {
+    $channel = calmChannel();
+    $video = Video::factory()->for($channel)->create();
+
+    Livewire::test('video-card', ['video' => $video])
+        ->assertSee(route('channels.show', $channel), escape: false);
+});
+
 it('shows the archived title, channel and duration', function (): void {
     $video = Video::factory()->for(calmChannel())->create([
         'title' => 'How Arch Bridges Actually Work',

@@ -77,6 +77,7 @@ class WeeklyPicks
 
         $waiting = $channel->videos()
             ->viewable()
+            ->unsnoozed()
             ->untouched()
             ->setAside()
             ->where('published_at', '<', $thisWeek)
@@ -95,6 +96,7 @@ class WeeklyPicks
     {
         $ofTheWeek = fn () => $channel->videos()
             ->viewable()
+            ->unsnoozed()
             ->where('published_at', '>=', $start)
             ->where('published_at', '<', $start->addWeek());
 
@@ -316,6 +318,7 @@ class WeeklyPicks
     {
         return array_values($channel->videos()
             ->viewable()
+            ->unsnoozed()
             ->pluck('published_at')
             ->map(fn (mixed $publishedAt): string => $this->weekOf(CarbonImmutable::parse($publishedAt))->toDateString())
             ->unique()

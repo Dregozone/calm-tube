@@ -158,3 +158,15 @@ it('shows the model your note and what you did with the channel before', functio
         && $prompt->contains('The one I hid')
         && $prompt->contains('1. [20 min] Up for the pick'));
 });
+
+it('still shows held and passed-over videos on the channel page', function (): void {
+    $passedOver = weeklyUpload($this->channel, '2026-09-15 10:00:00');
+    $held = weeklyUpload($this->channel, '2026-09-22 08:00:00');
+    WeeklyPicker::fake([['picks' => []]]);
+
+    settleWeeks($this->channel);
+
+    expect(Video::inFeed()->count())->toBe(0);
+    Livewire\Livewire::test('pages::channels.show', ['channel' => $this->channel])
+        ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->sort()->values()->all() === [$passedOver->id, $held->id]);
+});

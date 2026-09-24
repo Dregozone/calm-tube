@@ -267,7 +267,7 @@ new #[Title('Channels')] class extends Component
                     'videos as set_aside_count' => fn ($query) => $query->setAside(),
                     // Counted the way the feed counts, so the number on the
                     // row is the number of cards you would actually see.
-                    'videos as unwatched_count' => fn ($query) => $query->viewable()->unwatched(),
+                    'videos as unwatched_count' => fn ($query) => $query->viewable()->unsnoozed()->unwatched(),
                 ])
                 ->get()
                 // By the name you see, which may be your own rather than

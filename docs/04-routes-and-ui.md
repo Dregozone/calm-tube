@@ -566,8 +566,9 @@ quietly dropping things.
 **Snooze** (video card, the channel list's menu, the channel page) is for a channel you
 don't want to hear from *right now*. What is already in the feed stays. Anything the channel
 publishes over the next `calm-tube.feed.snooze_days` (7) is still archived but stamped
-`videos.snoozed_at`, which `scopeViewable()` excludes, so it never reaches the feed or the
-channel page, and never takes a place under a sample limit. That stays true after the snooze
+`videos.snoozed_at`, which `scopeInFeed()` excludes (and the sample limits ignore), so it
+never reaches the feed or takes a place under a limit. Like set-aside videos it stays on the
+channel page, with its own "Snoozed" tab there. That stays true after the snooze
 ends, including for a video from the snoozed window that a later refresh only just found:
 the window is kept on the channel (`snoozed_from`, `snoozed_until`) and checked when a video
 is created. Refreshes carry on as normal throughout, so nothing about the archive changes.

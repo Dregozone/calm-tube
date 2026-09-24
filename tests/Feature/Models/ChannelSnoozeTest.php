@@ -128,3 +128,18 @@ it('snoozes and wakes a channel from its page', function (): void {
 
     expect($channel->fresh()->isSnoozed())->toBeFalse();
 });
+
+it('still shows videos published during a snooze on the channel page, under their own tab', function (): void {
+    $channel = calmChannel();
+    $channel->snooze();
+    $slept = Video::factory()->for($channel)->create(['published_at' => now()->addDay()]);
+    $shows = fn ($videos): bool => $videos->pluck('id')->all() === [$slept->id];
+
+    Livewire::test('pages::channels.show', ['channel' => $channel->fresh()])
+        ->assertViewHas('videos', $shows)
+        ->assertSee('Snoozed')
+        ->set('filter', 'snoozed')
+        ->assertViewHas('videos', $shows);
+
+    expect(Video::inFeed()->count())->toBe(0);
+});

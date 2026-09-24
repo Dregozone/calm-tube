@@ -19,7 +19,7 @@ new class extends Component
 
     public Channel $channel;
 
-    /** all | unwatched | set-aside */
+    /** all | unwatched | set-aside | snoozed */
     #[Url]
     public string $filter = 'all';
 
@@ -140,6 +140,12 @@ new class extends Component
     }
 
     #[Computed]
+    public function snoozedCount(): int
+    {
+        return $this->archive()->snoozed()->count();
+    }
+
+    #[Computed]
     public function setAsideCount(): int
     {
         return $this->archive()->setAside()->count();
@@ -177,6 +183,7 @@ new class extends Component
             ->with('channel')
             ->when($this->filter === 'unwatched', fn (Builder $query) => $query->unwatched())
             ->when($this->filter === 'set-aside', fn (Builder $query) => $query->setAside())
+            ->when($this->filter === 'snoozed', fn (Builder $query) => $query->snoozed())
             ->orderByDesc('published_at')
             ->paginate((int) config('calm-tube.feed.per_page'));
     }
@@ -298,6 +305,10 @@ new class extends Component
 
                     @if ($this->setAsideCount > 0)
                         <flux:radio value="set-aside">{{ __('Set aside') }}</flux:radio>
+                    @endif
+
+                    @if ($this->snoozedCount > 0)
+                        <flux:radio value="snoozed">{{ __('Snoozed') }}</flux:radio>
                     @endif
                 </flux:radio.group>
 

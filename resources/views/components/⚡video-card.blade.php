@@ -124,16 +124,23 @@ new class extends Component
         </a>
 
         <div class="mt-1.5 flex items-center gap-2">
-            <img
-                src="{{ route('avatars.show', $video->channel) }}"
-                alt=""
-                loading="lazy"
-                class="size-5 shrink-0 rounded-full bg-zinc-200 object-cover dark:bg-zinc-700"
-            />
+            <a href="{{ route('channels.show', $video->channel) }}" wire:navigate class="shrink-0" tabindex="-1" aria-hidden="true">
+                <img
+                    src="{{ route('avatars.show', $video->channel) }}"
+                    alt=""
+                    loading="lazy"
+                    class="size-5 rounded-full bg-zinc-200 object-cover dark:bg-zinc-700"
+                />
+            </a>
 
             <flux:text size="sm" class="truncate">
-                {{ $video->channel->display_name }}
+                <a href="{{ route('channels.show', $video->channel) }}" wire:navigate class="hover:underline">{{ $video->channel->display_name }}</a>
                 · {{ $video->published_at->diffForHumans() }}
+                @if ($video->isSnoozed())
+                    · {{ __('snoozed') }}
+                @elseif ($video->isSetAside())
+                    · {{ __('set aside') }}
+                @endif
                 @if ($video->isWatched())
                     · {{ __('watched') }}
                 @elseif ($video->isResumable())

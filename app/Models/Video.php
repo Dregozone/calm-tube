@@ -137,8 +137,6 @@ class Video extends Model
     public function scopeViewable(Builder $query): void
     {
         $query->whereNull('hidden_at')
-            // Published while its channel was snoozed: kept, never shown.
-            ->whereNull('snoozed_at')
             ->whereNull('unavailable_at')
             ->where('live_status', LiveStatus::None)
             ->where(fn (Builder $shortsQuery): Builder => $shortsQuery
@@ -155,9 +153,11 @@ class Video extends Model
     public function scopeInFeed(Builder $query): void
     {
         $query->viewable()
-            // Set aside by a channel's sample limit. Deliberately not part of
-            // viewable(): the channel page must still show what it holds.
+            // Set aside by a channel's sample limit, or published while it was
+            // snoozed. Deliberately not part of viewable(): the channel page
+            // must still show everything it holds.
             ->whereNull('sampled_out_at')
+            ->unsnoozed()
             ->whereHas('channel', fn (Builder $channelQuery): Builder => $channelQuery
                 ->where('is_enabled', true));
     }
@@ -175,6 +175,30 @@ class Video extends Model
     public function isSetAside(): bool
     {
         return $this->sampled_out_at !== null;
+    }
+
+    /**
+     * Published while its channel was snoozed: archived and on the channel
+     * page, but never in the feed and never counted by a sample limit.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeSnoozed(Builder $query): void
+    {
+        $query->whereNotNull('snoozed_at');
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     */
+    public function scopeUnsnoozed(Builder $query): void
+    {
+        $query->whereNull('snoozed_at');
+    }
+
+    public function isSnoozed(): bool
+    {
+        return $this->snoozed_at !== null;
     }
 
     /**
