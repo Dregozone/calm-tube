@@ -28,6 +28,8 @@ class EnrichVideosCommand extends Command
 
     public function handle(DataApiClient $api, VideoEnricher $enricher): int
     {
+        $this->decideShorts($enricher);
+
         if (! $api->isConfigured()) {
             $this->info('No YouTube API key configured, so there is nothing to enrich.');
 
@@ -58,6 +60,33 @@ class EnrichVideosCommand extends Command
         $this->info(sprintf('Checked %d %s.', $count, Str::plural('video', $count)));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Finishes Shorts detection for videos that already have their API data.
+     *
+     * A refresh cut short after enrichment leaves these undecided, and an
+     * undecided video is shown, so a haul of Shorts would sit in the feed.
+     * Refreshes never revisit a stored video, so this is where they heal.
+     * Needs no API key: detection never uses one.
+     */
+    private function decideShorts(VideoEnricher $enricher): void
+    {
+        $undecided = Video::query()
+            ->whereNull('is_short')
+            ->whereNotNull('enriched_at')
+            ->whereNull('unavailable_at')
+            ->where('live_status', LiveStatus::None)
+            ->get();
+
+        if ($undecided->isEmpty()) {
+            return;
+        }
+
+        $enricher->detectShorts($undecided);
+
+        $count = $undecided->count();
+        $this->info(sprintf('Checked %d %s for Shorts.', $count, Str::plural('video', $count)));
     }
 
     /**

@@ -44,6 +44,8 @@ class ChannelRefresher
         Channel $channel,
         RefreshTrigger $trigger = RefreshTrigger::Manual,
     ): RefreshResult {
+        $this->restartTimeLimit();
+
         $run = $this->startRun($channel, $trigger);
 
         try {
@@ -267,6 +269,22 @@ class ChannelRefresher
             ->inFeed()
             ->whereKey($stored->map(fn (Video $video): int => $video->getKey())->all())
             ->count();
+    }
+
+    /**
+     * Gives this channel a fresh time budget.
+     *
+     * Refreshes run synchronously, so the feed's refresh of every channel is
+     * one web request. Killed partway, it leaves videos stored but not yet
+     * checked for Shorts, and a refresh never looks at a stored video again.
+     */
+    private function restartTimeLimit(): void
+    {
+        if ((int) ini_get('max_execution_time') === 0) {
+            return;
+        }
+
+        set_time_limit((int) config('calm-tube.refresh.seconds_per_channel'));
     }
 
     private function startRun(Channel $channel, RefreshTrigger $trigger): RefreshRun

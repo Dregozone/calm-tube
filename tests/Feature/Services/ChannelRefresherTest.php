@@ -642,3 +642,30 @@ describe('summarising a run across channels', function (): void {
         expect($summary)->toBe('1 new video. 1 channel failed to refresh.');
     });
 });
+
+describe('time limit', function (): void {
+    afterEach(function (): void {
+        set_time_limit(0);
+    });
+
+    it('gives each channel a fresh time budget in a web request', function (): void {
+        Storage::fake('local');
+        fakeSuccessfulRefresh();
+        config()->set('calm-tube.refresh.seconds_per_channel', 120);
+        set_time_limit(30);
+
+        $this->refresher->refresh(calmChannel());
+
+        expect(ini_get('max_execution_time'))->toBe('120');
+    });
+
+    it('leaves the command line without a time limit', function (): void {
+        Storage::fake('local');
+        fakeSuccessfulRefresh();
+        set_time_limit(0);
+
+        $this->refresher->refresh(calmChannel());
+
+        expect(ini_get('max_execution_time'))->toBe('0');
+    });
+});

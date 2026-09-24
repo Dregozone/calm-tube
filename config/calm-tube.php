@@ -37,6 +37,12 @@ return [
         'retries' => 2,
         'retry_delay' => 1000,
 
+        // A web request gets 30 seconds from PHP, which a run over every
+        // channel can outlast. Each channel restarts the clock with this
+        // long, so a big haul of Shorts to probe cannot cut a run short.
+        // The command line has no limit and is left without one.
+        'seconds_per_channel' => 120,
+
         // Refresh history is operational log data, not part of the archive,
         // and it is the only thing this app ever deletes on a schedule.
         'keep_runs_for_days' => 30,

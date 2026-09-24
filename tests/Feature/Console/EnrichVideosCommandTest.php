@@ -104,3 +104,29 @@ it('batches its lookups 50 at a time', function (): void {
 
     Http::assertSentCount(2);
 });
+
+it('decides a video a refresh left undecided on Shorts', function (): void {
+    fakeShortsProbe(200);
+    $video = Video::factory()->for(calmChannel())->shortUnknown()->create([
+        'duration_seconds' => 40,
+        'enriched_at' => now(),
+    ]);
+
+    $this->artisan('calm:enrich')->assertSuccessful();
+
+    expect($video->fresh()->is_short)->toBeTrue()
+        ->and(Video::inFeed()->count())->toBe(0);
+});
+
+it('decides undecided Shorts without an API key', function (): void {
+    config()->set('calm-tube.api_key');
+    fakeShortsProbe(200);
+    $video = Video::factory()->for(calmChannel())->shortUnknown()->create([
+        'duration_seconds' => 40,
+        'enriched_at' => now(),
+    ]);
+
+    $this->artisan('calm:enrich')->assertSuccessful();
+
+    expect($video->fresh()->is_short)->toBeTrue();
+});
