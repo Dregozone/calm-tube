@@ -134,7 +134,7 @@ new class extends Component
             </a>
 
             <flux:text size="sm" class="truncate">
-                <a href="{{ route('channels.show', $video->channel) }}" wire:navigate class="hover:underline">{{ $video->channel->display_name }}</a>
+                <x-channel-link :channel="$video->channel" />
                 · {{ $video->published_at->diffForHumans() }}
                 @if ($video->isSnoozed())
                     · {{ __('snoozed') }}

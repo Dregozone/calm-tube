@@ -138,3 +138,13 @@ describe('actions', function (): void {
         expect(Video::inFeed()->count())->toBe(0);
     });
 });
+
+it('offers to go to or edit the channel from a right-click on its name', function (): void {
+    $channel = calmChannel();
+    $video = Video::factory()->for($channel)->create();
+
+    Livewire::test('video-card', ['video' => $video])
+        ->assertSee('x-on:contextmenu.prevent', escape: false)
+        ->assertSee('Go to channel')
+        ->assertSee("\$dispatch('edit-channel', { channelId: {$channel->id} })", escape: false);
+});

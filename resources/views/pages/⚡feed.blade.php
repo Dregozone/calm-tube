@@ -75,9 +75,11 @@ new #[Title('Feed')] class extends Component
     }
 
     #[On('feed-changed')]
+    #[On('channel-saved')]
     public function feedChanged(): void
     {
-        // Re-renders so a hidden video leaves the grid.
+        // Re-renders so a hidden video leaves the grid, and a channel edited
+        // from a card shows its new name, speed and limit.
     }
 
     /**
@@ -409,4 +411,6 @@ new #[Title('Feed')] class extends Component
 
         <x-pager :paginator="$videos" class="mt-8" />
     @endif
+
+    <livewire:channel-editor />
 </section>

@@ -261,7 +261,7 @@ describe('managing a channel', function (): void {
     it('saves a custom display name', function (): void {
         $channel = calmChannel();
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('customName', 'Bridges Guy')
             ->call('save');
@@ -272,7 +272,7 @@ describe('managing a channel', function (): void {
     it('clears the custom name when it is emptied', function (): void {
         $channel = calmChannel(['custom_name' => 'Bridges Guy']);
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('customName', '')
             ->call('save');
@@ -351,7 +351,7 @@ describe('finishing early from the channel list', function (): void {
     it('saves how long the channel outro plug runs', function (): void {
         $channel = calmChannel();
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('outroSeconds', '15')
             ->call('save')
@@ -363,7 +363,7 @@ describe('finishing early from the channel list', function (): void {
     it('loads the outro already set', function (): void {
         $channel = calmChannel(['outro_seconds' => 20]);
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->assertSet('outroSeconds', '20');
     });
@@ -371,7 +371,7 @@ describe('finishing early from the channel list', function (): void {
     it('goes back to watching to the end when emptied', function (): void {
         $channel = calmChannel(['outro_seconds' => 20]);
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('outroSeconds', '')
             ->call('save');
@@ -382,7 +382,7 @@ describe('finishing early from the channel list', function (): void {
     it('refuses an outro that is not a sensible number of seconds', function (string $seconds): void {
         $channel = calmChannel();
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('outroSeconds', $seconds)
             ->call('save')
@@ -396,7 +396,7 @@ describe('playback speed from the channel list', function (): void {
     it('saves a speed for every video from the channel', function (): void {
         $channel = calmChannel();
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('playbackRate', '1.5')
             ->call('save');
@@ -407,7 +407,7 @@ describe('playback speed from the channel list', function (): void {
     it('loads the speed already chosen', function (): void {
         $channel = calmChannel(['playback_rate' => 2.0]);
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->assertSet('playbackRate', '2');
     });
@@ -415,7 +415,7 @@ describe('playback speed from the channel list', function (): void {
     it('returns a channel to normal speed', function (): void {
         $channel = calmChannel(['playback_rate' => 2.0]);
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('playbackRate', '')
             ->call('save');
@@ -426,7 +426,7 @@ describe('playback speed from the channel list', function (): void {
     it('refuses a speed the player would not accept', function (): void {
         $channel = calmChannel();
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('playbackRate', '9')
             ->call('save')
@@ -494,7 +494,7 @@ describe('sampling a noisy channel', function (): void {
     it('saves a limit on how much of the channel reaches the feed', function (): void {
         $channel = calmChannel();
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('sampleLimit', '3')
             ->call('save');
@@ -512,7 +512,7 @@ describe('sampling a noisy channel', function (): void {
             ]);
         }
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('sampleLimit', '3')
             ->call('save');
@@ -524,7 +524,7 @@ describe('sampling a noisy channel', function (): void {
         $channel = calmChannel(['sample_limit' => 1]);
         Video::factory()->for($channel)->setAside()->count(3)->create();
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('sampleLimit', '')
             ->call('save');
@@ -536,7 +536,7 @@ describe('sampling a noisy channel', function (): void {
     it('loads the limit already set', function (): void {
         $channel = calmChannel(['sample_limit' => 5]);
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->assertSet('sampleLimit', '5');
     });
@@ -544,7 +544,7 @@ describe('sampling a noisy channel', function (): void {
     it('refuses a limit that is not a sensible number', function (): void {
         $channel = calmChannel();
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('sampleLimit', '0')
             ->call('save')
@@ -565,7 +565,7 @@ describe('sampling a noisy channel', function (): void {
     it('saves a weekly pick with what you want from the channel', function (): void {
         $channel = calmChannel();
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('sampleLimit', '2')
             ->set('samplePeriod', 'week')
@@ -583,7 +583,7 @@ describe('sampling a noisy channel', function (): void {
         $channel = calmChannel();
         Video::factory()->for($channel)->create(['published_at' => now()]);
 
-        Livewire::test('pages::channels.index')
+        Livewire::test('channel-editor')
             ->call('edit', $channel->id)
             ->set('sampleLimit', '2')
             ->set('samplePeriod', 'week')
