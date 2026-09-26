@@ -1,27 +1,25 @@
 <?php
 
-use Laravel\Fortify\Features;
+use App\Models\User;
 
-beforeEach(function () {
-    $this->skipUnlessFortifyHas(Features::registration());
+it('has no registration screen', function (): void {
+    $this->get('/register')->assertNotFound();
 });
 
-test('registration screen can be rendered', function () {
-    $response = $this->get(route('register'));
-
-    $response->assertOk();
-});
-
-test('new users can register', function () {
-    $response = $this->post(route('register.store'), [
-        'name' => 'John Doe',
-        'email' => 'test@example.com',
+it('does not let anyone sign up', function (): void {
+    $this->post('/register', [
+        'name' => 'Stranger',
+        'email' => 'stranger@example.com',
         'password' => 'password',
         'password_confirmation' => 'password',
-    ]);
+    ])->assertNotFound();
 
-    $response->assertSessionHasNoErrors()
-        ->assertRedirect(route('feed', absolute: false));
+    expect(User::query()->count())->toBe(0);
+    $this->assertGuest();
+});
 
-    $this->assertAuthenticated();
+it('does not offer sign up on the login page', function (): void {
+    $this->get(route('login'))
+        ->assertOk()
+        ->assertDontSee('Sign up');
 });

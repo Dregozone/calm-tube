@@ -17,7 +17,7 @@ beforeEach(function (): void {
 
 describe('ingest', function (): void {
     it('creates a video for every entry in the feed', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh();
         $channel = calmChannel();
 
@@ -28,7 +28,7 @@ describe('ingest', function (): void {
     });
 
     it('stores the fields it archives from the feed', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
         $channel = calmChannel();
 
@@ -44,7 +44,7 @@ describe('ingest', function (): void {
     });
 
     it('creates nothing on a second refresh of an unchanged feed', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh();
         $channel = calmChannel();
 
@@ -56,7 +56,7 @@ describe('ingest', function (): void {
     });
 
     it('adds only the entries it has not seen before', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeedSequence('feed-single-entry.xml', 'feed.xml');
         fakeVideosList();
         fakeThumbnailDownloads();
@@ -72,7 +72,7 @@ describe('ingest', function (): void {
 
 describe('the archive guarantee', function (): void {
     it('does not update the title when the uploader retitles the video', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeedSequence('feed-single-entry.xml', 'feed-retitled.xml');
         fakeVideosList('videos.list-single.json');
         fakeThumbnailDownloads();
@@ -86,7 +86,7 @@ describe('the archive guarantee', function (): void {
     });
 
     it('does not update the thumbnail when the uploader swaps it', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeedSequence('feed-single-entry.xml', 'feed-retitled.xml');
         fakeVideosList('videos.list-single.json');
         fakeThumbnailDownloads();
@@ -103,7 +103,7 @@ describe('the archive guarantee', function (): void {
     });
 
     it('does not re-download a thumbnail it has already archived', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeedSequence('feed-single-entry.xml', 'feed-retitled.xml');
         fakeVideosList('videos.list-single.json');
         fakeThumbnailDownloads();
@@ -119,7 +119,7 @@ describe('the archive guarantee', function (): void {
 
 describe('conditional requests', function (): void {
     it('stores the feed validators on the channel', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed-empty.xml', 200, ['ETag' => '"abc123"', 'Last-Modified' => 'Sun, 15 Mar 2026 14:00:00 GMT']);
         $channel = calmChannel();
 
@@ -145,7 +145,7 @@ describe('conditional requests', function (): void {
 
 describe('enrichment', function (): void {
     it('stores the duration returned by the API', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
 
         $this->refresher->refresh(calmChannel());
@@ -154,7 +154,7 @@ describe('enrichment', function (): void {
     });
 
     it('marks a video unavailable when the API does not return it', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed-single-entry.xml');
         fakeVideosList('videos.list-empty.json');
         fakeThumbnailDownloads();
@@ -166,7 +166,7 @@ describe('enrichment', function (): void {
     });
 
     it('records when a video was enriched', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         $this->freezeTime();
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
 
@@ -178,7 +178,7 @@ describe('enrichment', function (): void {
 
 describe('Shorts', function (): void {
     it('stores a Short but keeps it out of the feed', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed-single-entry.xml');
         fakeVideosList('videos.list-short.json');
         fakeShortsProbe(200);
@@ -190,7 +190,7 @@ describe('Shorts', function (): void {
     });
 
     it('never downloads a thumbnail for a Short', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed-single-entry.xml');
         fakeVideosList('videos.list-short.json');
         fakeShortsProbe(200);
@@ -201,7 +201,7 @@ describe('Shorts', function (): void {
     });
 
     it('does not probe videos that are too long to be a Short', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh();
 
         $this->refresher->refresh(calmChannel());
@@ -212,7 +212,7 @@ describe('Shorts', function (): void {
 
 describe('degrading without the API', function (): void {
     it('still ingests videos when no API key is configured', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         config()->set('calm-tube.api_key');
         fakeFeed('feed-single-entry.xml');
         fakeShortsProbe();
@@ -228,7 +228,7 @@ describe('degrading without the API', function (): void {
     });
 
     it('sends no API request when no key is configured', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         config()->set('calm-tube.api_key');
         fakeFeed('feed-single-entry.xml');
         fakeShortsProbe();
@@ -240,7 +240,7 @@ describe('degrading without the API', function (): void {
     });
 
     it('keeps the videos it ingested when the API quota is exhausted', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed-single-entry.xml');
         fakeVideosList('quota-exceeded.json', 403);
         fakeShortsProbe();
@@ -288,7 +288,7 @@ describe('failures', function (): void {
     });
 
     it('clears a previous error after a successful refresh', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         config()->set('calm-tube.api_key', 'test-api-key');
         $channel = Channel::factory()->failing()->create(['youtube_channel_id' => CALM_CHANNEL_ID]);
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
@@ -302,7 +302,7 @@ describe('failures', function (): void {
 
 describe('refresh runs', function (): void {
     it('records the outcome of a successful refresh', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
         $channel = calmChannel();
 
@@ -343,7 +343,7 @@ describe('refresh runs', function (): void {
 
 describe('recovering an overflowed feed', function (): void {
     it('walks the uploads playlist when every feed entry is new', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         $channel = calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ']);
 
         // A previous refresh left the channel with a video the feed no longer holds.
@@ -362,7 +362,7 @@ describe('recovering an overflowed feed', function (): void {
     });
 
     it('does not walk the playlist on a channel it has never refreshed', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh();
 
         $result = $this->refresher->refresh(
@@ -374,7 +374,7 @@ describe('recovering an overflowed feed', function (): void {
     });
 
     it('does not walk the playlist when the feed held something it already had', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         $channel = calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ']);
         fakeFeedSequence('feed-single-entry.xml', 'feed.xml');
         fakeVideosList();
@@ -387,7 +387,7 @@ describe('recovering an overflowed feed', function (): void {
     });
 
     it('does not walk the playlist without an API key', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         config()->set('calm-tube.api_key');
         $channel = calmChannel(['uploads_playlist_id' => 'UUMOqf8ab-42UUQIdVoKwjlQ']);
         Video::factory()->for($channel)->create(['youtube_video_id' => 'bkfilvid004']);
@@ -411,7 +411,7 @@ describe('when the feed is unavailable', function (): void {
      */
 
     it('falls back to the uploads playlist when the feed 404s', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed.xml', 404);
         fakeUploadsPlaylist('playlist-items-page2.json');
         fakeVideosList('videos.list-empty.json');
@@ -427,7 +427,7 @@ describe('when the feed is unavailable', function (): void {
     });
 
     it('falls back when the feed cannot be reached at all', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeedFailure();
         fakeUploadsPlaylist('playlist-items-page2.json');
         fakeVideosList('videos.list-empty.json');
@@ -441,7 +441,7 @@ describe('when the feed is unavailable', function (): void {
     });
 
     it('stops at the first video it already has, so the fallback stays cheap', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed.xml', 404);
         fakeUploadsPlaylist();
         fakeVideosList('videos.list-empty.json');
@@ -467,7 +467,7 @@ describe('when the feed is unavailable', function (): void {
     });
 
     it('skips the feed entirely when it has been turned off', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         config()->set('calm-tube.refresh.try_feed', false);
         fakeUploadsPlaylist('playlist-items-page2.json');
         fakeVideosList('videos.list-empty.json');
@@ -496,7 +496,7 @@ describe('when the feed is unavailable', function (): void {
 
 describe('sampling a noisy channel', function (): void {
     it('sets aside what the day it ingested holds past the limit', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
         // A seeded video makes the all-new feed look like an overflow, so the
         // uploads walk that follows needs a stub of its own.
@@ -517,7 +517,7 @@ describe('sampling a noisy channel', function (): void {
     });
 
     it('leaves a channel that publishes once a day untouched by a limit of three', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh();
         $channel = calmChannel(['sample_limit' => 3]);
 
@@ -529,7 +529,7 @@ describe('sampling a noisy channel', function (): void {
     });
 
     it('still counts everything it ingested as new', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
         fakeUploadsPlaylist('playlist-items-empty.json');
         $channel = calmChannel(['sample_limit' => 1]);
@@ -544,7 +544,7 @@ describe('sampling a noisy channel', function (): void {
     });
 
     it('leaves a channel without a limit completely alone', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh();
         $channel = calmChannel();
 
@@ -557,7 +557,7 @@ describe('sampling a noisy channel', function (): void {
 
 describe('what a refresh reports', function (): void {
     it('counts only what you will actually see', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed-single-entry.xml');
         fakeVideosList('videos.list-short.json');
         fakeShortsProbe(200);
@@ -574,7 +574,7 @@ describe('what a refresh reports', function (): void {
     });
 
     it('says so in a sentence rather than leaving you to wonder', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed-single-entry.xml');
         fakeVideosList('videos.list-short.json');
         fakeShortsProbe(200);
@@ -586,7 +586,7 @@ describe('what a refresh reports', function (): void {
     });
 
     it('counts a video that did reach the feed', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
 
         $result = $this->refresher->refresh(calmChannel());
@@ -597,7 +597,7 @@ describe('what a refresh reports', function (): void {
     });
 
     it('counts a video its channel sample limit held back', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
         fakeUploadsPlaylist('playlist-items-empty.json');
         $channel = calmChannel(['sample_limit' => 1]);
@@ -649,7 +649,7 @@ describe('time limit', function (): void {
     });
 
     it('gives each channel a fresh time budget in a web request', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh();
         config()->set('calm-tube.refresh.seconds_per_channel', 120);
         set_time_limit(30);
@@ -660,7 +660,7 @@ describe('time limit', function (): void {
     });
 
     it('leaves the command line without a time limit', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh();
         set_time_limit(0);
 

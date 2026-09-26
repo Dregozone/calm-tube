@@ -1,65 +1,24 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Auth\Notifications\ResetPassword;
 use Illuminate\Support\Facades\Notification;
-use Laravel\Fortify\Features;
 
-beforeEach(function () {
-    $this->skipUnlessFortifyHas(Features::resetPasswords());
-});
+it('has no password reset screens', function (string $uri): void {
+    $this->get($uri)->assertNotFound();
+})->with([
+    'request a link' => '/forgot-password',
+    'choose a password' => '/reset-password/some-token',
+]);
 
-test('reset password link screen can be rendered', function () {
-    $response = $this->get(route('password.request'));
-
-    $response->assertOk();
-});
-
-test('reset password link can be requested', function () {
+it('does not send reset links', function (): void {
     Notification::fake();
-
     $user = User::factory()->create();
 
-    $this->post(route('password.request'), ['email' => $user->email]);
+    $this->post('/forgot-password', ['email' => $user->email])->assertNotFound();
 
-    Notification::assertSentTo($user, ResetPassword::class);
+    Notification::assertNothingSent();
 });
 
-test('reset password screen can be rendered', function () {
-    Notification::fake();
-
-    $user = User::factory()->create();
-
-    $this->post(route('password.request'), ['email' => $user->email]);
-
-    Notification::assertSentTo($user, ResetPassword::class, function ($notification) {
-        $response = $this->get(route('password.reset', $notification->token));
-
-        $response->assertOk();
-
-        return true;
-    });
-});
-
-test('password can be reset with valid token', function () {
-    Notification::fake();
-
-    $user = User::factory()->create();
-
-    $this->post(route('password.request'), ['email' => $user->email]);
-
-    Notification::assertSentTo($user, ResetPassword::class, function ($notification) use ($user) {
-        $response = $this->post(route('password.update'), [
-            'token' => $notification->token,
-            'email' => $user->email,
-            'password' => 'password',
-            'password_confirmation' => 'password',
-        ]);
-
-        $response
-            ->assertSessionHasNoErrors()
-            ->assertRedirect(route('login', absolute: false));
-
-        return true;
-    });
+it('does not offer a reset on the login page', function (): void {
+    $this->get(route('login'))->assertDontSee('Forgot your password?');
 });

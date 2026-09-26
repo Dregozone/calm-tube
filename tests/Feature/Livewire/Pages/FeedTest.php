@@ -158,7 +158,7 @@ describe('refreshing', function (): void {
     });
 
     it('reports how many new videos arrived', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
         calmChannel();
 
@@ -168,7 +168,7 @@ describe('refreshing', function (): void {
     });
 
     it('says so when nothing new arrived', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed-empty.xml');
         calmChannel();
 
@@ -178,7 +178,7 @@ describe('refreshing', function (): void {
     });
 
     it('reports a channel that failed without hiding the ones that worked', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         // No key, so the unreachable feed has no uploads playlist to fall back to.
         config()->set('calm-tube.api_key');
         fakeFeedFailure();
@@ -491,7 +491,7 @@ describe('videos that arrive while you are reading', function (): void {
     });
 
     it('says nothing when a refresh found nothing', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeFeed('feed-empty.xml');
         calmChannel(['last_refreshed_at' => now()->subHours(9)]);
 

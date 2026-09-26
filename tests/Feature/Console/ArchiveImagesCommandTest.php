@@ -6,7 +6,7 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Storage;
 
 beforeEach(function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
 });
 
 it('archives thumbnails that are not stored yet', function (): void {
@@ -18,7 +18,7 @@ it('archives thumbnails that are not stored yet', function (): void {
         ->assertSuccessful();
 
     expect($video->fresh()->thumbnail_path)->not->toBeNull();
-    Storage::disk('local')->assertExists($video->fresh()->thumbnail_path);
+    Storage::disk('images')->assertExists($video->fresh()->thumbnail_path);
 });
 
 it('leaves a video it has already archived alone', function (): void {

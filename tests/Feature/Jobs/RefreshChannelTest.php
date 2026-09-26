@@ -7,7 +7,7 @@ use App\Models\Video;
 use Illuminate\Support\Facades\Storage;
 
 it('refreshes the channel it was given', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
     $channel = calmChannel();
 
@@ -17,7 +17,7 @@ it('refreshes the channel it was given', function (): void {
 });
 
 it('passes the trigger through to the refresh run', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     fakeFeed('feed-empty.xml');
     $channel = calmChannel();
 

@@ -14,7 +14,7 @@ beforeEach(function (): void {
 
 describe('adding a channel', function (): void {
     it('adds a channel pasted as a handle', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeChannelsList();
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
 
@@ -31,7 +31,7 @@ describe('adding a channel', function (): void {
     });
 
     it('fetches the channel videos straight away, so the feed is never empty', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeChannelsList();
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
 
@@ -43,7 +43,7 @@ describe('adding a channel', function (): void {
     });
 
     it('archives the channel avatar', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeChannelsList();
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
 
@@ -55,7 +55,7 @@ describe('adding a channel', function (): void {
     });
 
     it('says how many videos it imported', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeChannelsList();
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
 
@@ -146,7 +146,7 @@ describe('add form errors', function (): void {
     });
 
     it('still adds a channel id without an API key', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         config()->set('calm-tube.api_key');
         fakeFeed('feed-single-entry.xml');
         fakeShortsProbe();
@@ -282,7 +282,7 @@ describe('managing a channel', function (): void {
     });
 
     it('refreshes a single channel', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
         $channel = calmChannel();
         $other = Channel::factory()->create();
@@ -317,16 +317,16 @@ describe('deleting a channel', function (): void {
     });
 
     it('deletes the channel and everything archived with it', function (): void {
-        Storage::fake('local');
+        Storage::fake('images');
         $channel = calmChannel();
         $video = Video::factory()->for($channel)->archived()->create();
-        Storage::disk('local')->put($video->thumbnail_path, 'archived bytes');
+        Storage::disk('images')->put($video->thumbnail_path, 'archived bytes');
 
         Livewire::test('pages::channels.index')->call('delete', $channel->id);
 
         $this->assertModelMissing($channel);
         $this->assertModelMissing($video);
-        Storage::disk('local')->assertMissing($video->thumbnail_path);
+        Storage::disk('images')->assertMissing($video->thumbnail_path);
     });
 
     it('leaves other channels untouched', function (): void {

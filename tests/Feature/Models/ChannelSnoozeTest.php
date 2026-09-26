@@ -43,7 +43,7 @@ it('keeps a video published during the snooze out when it is only discovered lat
 });
 
 it('stamps videos a refresh stores while the channel is snoozed', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     fakeSuccessfulRefresh();
     $channel = calmChannel(['snoozed_from' => '2020-01-01', 'snoozed_until' => now()->addWeek()]);
 

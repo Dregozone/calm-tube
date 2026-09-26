@@ -166,7 +166,7 @@ So future sessions don't relitigate these:
 | Decision | Settled as |
 | --- | --- |
 | Frontend | Livewire 4 single-file pages + Flux Free (already installed) |
-| Auth | Fortify kept, single user, `auth` middleware, registration closed after setup |
+| Auth | Fortify kept, single user, `auth` middleware; no registration, reset or verification — `make:login` creates the account |
 | Database | SQLite |
 | Refresh execution | Synchronous, `dispatchSync()`, no queue worker |
 | Backfill on add | RSS only (~15 videos); `calm:backfill` reaches further on demand |
@@ -176,7 +176,7 @@ So future sessions don't relitigate these:
 | Retention | Videos and channels kept forever; only `refresh_runs` are pruned |
 | Channel removal | Disable is the default action; delete is secondary and cascades |
 | Titles | Archived at first ingest, never updated, changes never stored or surfaced |
-| Thumbnails | Archived locally, `maxresdefault` → `mqdefault`, served via a route |
+| Thumbnails | Archived in the database (`archived_images`, base64), `maxresdefault` → `mqdefault`, served via a route |
 | Playback speed | Per channel, not per video. Stored on `channels.playback_rate`, set from the watch page |
 | End of video | Overlay covers the end screen, then a viewport-fixed modal counts down and returns you to your list. Both `wire:ignore` |
 | Feed default | Unwatched on a fresh session; your last choice is remembered after that |

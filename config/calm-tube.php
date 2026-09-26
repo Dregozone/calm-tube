@@ -77,8 +77,10 @@ return [
     | Archived Images
     |--------------------------------------------------------------------------
     |
-    | Thumbnails are downloaded once and served locally, so that a thumbnail
-    | swapped on YouTube later cannot change what you see.
+    | Thumbnails are downloaded once and served from the app, so that a
+    | thumbnail swapped on YouTube later cannot change what you see. The
+    | `images` disk keeps them in the database: the production host wipes its
+    | filesystem on every deploy, and an archive that can vanish is not one.
     |
     | The URL is whatever YouTube returned. Google's documentation asks
     | applications to use thumbnail URLs exactly as given rather than
@@ -89,7 +91,7 @@ return [
     */
 
     'images' => [
-        'disk' => 'local',
+        'disk' => 'images',
         'path' => 'calm-tube',
         'minimum_bytes' => 1024,
     ],
@@ -195,6 +197,25 @@ return [
         // Snoozing a channel keeps what is already here and lets nothing it
         // publishes over this many days into the feed, ever.
         'snooze_days' => 7,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | One-time import
+    |--------------------------------------------------------------------------
+    |
+    | Moving the library to production is a push: `calm:push` on the machine
+    | that has it, into an endpoint on the server that exists only while this
+    | token is set. Unset (the normal state) the endpoint answers 404, and once
+    | an import finishes it stays closed even if the token is left behind.
+    |
+    */
+
+    'import' => [
+        'token' => env('CALM_IMPORT_TOKEN'),
+
+        // Anything shorter is treated as unset rather than trusted.
+        'minimum_token_length' => 32,
     ],
 
 ];

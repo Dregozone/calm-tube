@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\Storage;
 
 beforeEach(function (): void {
     $this->archiver = app(ImageArchiver::class);
-    Storage::fake('local');
+    Storage::fake('images');
 });
 
 function archivable(?string $thumbnailUrl): Video
@@ -27,7 +27,7 @@ it('archives the thumbnail at the url YouTube returned', function (): void {
     $path = $this->archiver->archiveThumbnail($video);
 
     expect($path)->toBe('calm-tube/thumbnails/'.CALM_VIDEO_ID.'.jpg');
-    Storage::disk('local')->assertExists($path);
+    Storage::disk('images')->assertExists($path);
     Http::assertSent(fn (Request $request): bool => $request->url() ===
         'https://i2.ytimg.com/vi/'.CALM_VIDEO_ID.'/hqdefault.jpg');
 });
@@ -51,7 +51,7 @@ it('rejects the tiny grey image YouTube serves for a missing thumbnail', functio
     $video = archivable('https://i2.ytimg.com/vi/'.CALM_VIDEO_ID.'/maxresdefault.jpg');
 
     expect($this->archiver->archiveThumbnail($video))->toBeNull();
-    Storage::disk('local')->assertMissing('calm-tube/thumbnails/'.CALM_VIDEO_ID.'.jpg');
+    Storage::disk('images')->assertMissing('calm-tube/thumbnails/'.CALM_VIDEO_ID.'.jpg');
 });
 
 it('returns null when the image is not there', function (): void {
@@ -59,7 +59,7 @@ it('returns null when the image is not there', function (): void {
     $video = archivable('https://i2.ytimg.com/vi/'.CALM_VIDEO_ID.'/maxresdefault.jpg');
 
     expect($this->archiver->archiveThumbnail($video))->toBeNull();
-    Storage::disk('local')->assertMissing('calm-tube/thumbnails/'.CALM_VIDEO_ID.'.jpg');
+    Storage::disk('images')->assertMissing('calm-tube/thumbnails/'.CALM_VIDEO_ID.'.jpg');
 });
 
 it('returns null when the download connection fails', function (): void {
@@ -92,7 +92,7 @@ it('archives a channel avatar', function (): void {
     $path = $this->archiver->archiveAvatar($channel);
 
     expect($path)->toBe('calm-tube/avatars/'.CALM_CHANNEL_ID.'.jpg');
-    Storage::disk('local')->assertExists($path);
+    Storage::disk('images')->assertExists($path);
 });
 
 it('returns null when a channel has no avatar url to archive', function (): void {

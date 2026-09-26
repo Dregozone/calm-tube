@@ -38,6 +38,12 @@ return [
             'report' => false,
         ],
 
+        'images' => [
+            'driver' => 'database',
+            'throw' => false,
+            'report' => false,
+        ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),

@@ -20,8 +20,10 @@ trait ServesArchivedImages
     {
         $disk = Storage::disk((string) config('calm-tube.images.disk'));
 
-        if ($path !== null && $disk->exists($path)) {
-            return response()->file($disk->path($path), [
+        $contents = $path !== null ? $disk->get($path) : null;
+
+        if ($contents !== null) {
+            return response($contents, 200, [
                 'Content-Type' => 'image/jpeg',
                 'Cache-Control' => 'public, max-age=31536000, immutable',
             ]);

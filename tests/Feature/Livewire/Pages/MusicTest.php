@@ -7,7 +7,7 @@ use Livewire\Livewire;
 
 beforeEach(function (): void {
     $this->actingAs(calmUser());
-    Storage::fake('local');
+    Storage::fake('images');
     config()->set('calm-tube.refresh.retry_delay', 0);
 });
 
@@ -49,7 +49,7 @@ describe('adding a mix', function (): void {
         $mix = Mix::query()->sole();
 
         expect($mix->thumbnail_path)->not->toBeNull();
-        Storage::disk('local')->assertExists($mix->thumbnail_path);
+        Storage::disk('images')->assertExists($mix->thumbnail_path);
     });
 
     it('knows the length straight away when there is an API key', function (): void {
@@ -143,7 +143,7 @@ describe('the list', function (): void {
     });
 
     it('serves the archived thumbnail', function (): void {
-        Storage::disk('local')->put('calm-tube/mixes/'.CALM_VIDEO_ID.'.jpg', youtubeFixture('thumbnail.jpg'));
+        Storage::disk('images')->put('calm-tube/mixes/'.CALM_VIDEO_ID.'.jpg', youtubeFixture('thumbnail.jpg'));
         $mix = Mix::factory()->create([
             'youtube_video_id' => CALM_VIDEO_ID,
             'thumbnail_path' => 'calm-tube/mixes/'.CALM_VIDEO_ID.'.jpg',
@@ -193,7 +193,7 @@ describe('playing', function (): void {
 
 describe('removing a mix', function (): void {
     it('removes the mix and its archived thumbnail', function (): void {
-        Storage::disk('local')->put('calm-tube/mixes/abc.jpg', 'image');
+        Storage::disk('images')->put('calm-tube/mixes/abc.jpg', 'image');
         $mix = Mix::factory()->create(['thumbnail_path' => 'calm-tube/mixes/abc.jpg', 'title' => 'Gone Soon']);
 
         Livewire::test('pages::music')
@@ -201,6 +201,6 @@ describe('removing a mix', function (): void {
             ->assertSee('Removed "Gone Soon".');
 
         expect(Mix::query()->count())->toBe(0);
-        Storage::disk('local')->assertMissing('calm-tube/mixes/abc.jpg');
+        Storage::disk('images')->assertMissing('calm-tube/mixes/abc.jpg');
     });
 });

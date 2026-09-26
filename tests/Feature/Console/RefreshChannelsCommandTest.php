@@ -11,7 +11,7 @@ use Illuminate\Support\Facades\Storage;
 const OTHER_CHANNEL_ID = 'UCsecondchannelidabcdefg';
 
 it('refreshes every enabled channel', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     fakeFeedSequence('feed-single-entry.xml', 'feed-other-single.xml');
     fakeVideosList();
     fakeThumbnailDownloads();
@@ -24,7 +24,7 @@ it('refreshes every enabled channel', function (): void {
 });
 
 it('does not refresh a disabled channel', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
     Channel::factory()->disabled()->create(['youtube_channel_id' => CALM_CHANNEL_ID]);
 
@@ -34,7 +34,7 @@ it('does not refresh a disabled channel', function (): void {
 });
 
 it('refreshes only the requested channel', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
     $wanted = calmChannel();
     $other = Channel::factory()->create(['youtube_channel_id' => OTHER_CHANNEL_ID]);
@@ -53,7 +53,7 @@ it('fails when the requested channel is not followed', function (): void {
 });
 
 it('reports how many new videos it found', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
     calmChannel();
 
@@ -63,7 +63,7 @@ it('reports how many new videos it found', function (): void {
 });
 
 it('keeps refreshing after one channel fails', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     // No key, so the unreachable feed has no uploads playlist to fall back to.
     config()->set('calm-tube.api_key');
     calmChannel();

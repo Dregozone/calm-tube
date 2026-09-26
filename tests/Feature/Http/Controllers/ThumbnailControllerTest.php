@@ -4,9 +4,9 @@ use App\Models\Video;
 use Illuminate\Support\Facades\Storage;
 
 it('serves the archived thumbnail', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     $video = Video::factory()->for(calmChannel())->archived()->create();
-    Storage::disk('local')->put($video->thumbnail_path, youtubeFixture('thumbnail.jpg'));
+    Storage::disk('images')->put($video->thumbnail_path, youtubeFixture('thumbnail.jpg'));
 
     $response = $this->actingAs(calmUser())->get(route('thumbnails.show', $video));
 
@@ -15,9 +15,9 @@ it('serves the archived thumbnail', function (): void {
 });
 
 it('tells the browser the archived thumbnail never changes', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     $video = Video::factory()->for(calmChannel())->archived()->create();
-    Storage::disk('local')->put($video->thumbnail_path, youtubeFixture('thumbnail.jpg'));
+    Storage::disk('images')->put($video->thumbnail_path, youtubeFixture('thumbnail.jpg'));
 
     $response = $this->actingAs(calmUser())->get(route('thumbnails.show', $video));
 
@@ -25,7 +25,7 @@ it('tells the browser the archived thumbnail never changes', function (): void {
 });
 
 it('falls back to YouTube when the thumbnail was never archived', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     $video = Video::factory()->for(calmChannel())->create([
         'thumbnail_path' => null,
         'thumbnail_url' => 'https://i.ytimg.com/vi/'.CALM_VIDEO_ID.'/hqdefault.jpg',
@@ -37,7 +37,7 @@ it('falls back to YouTube when the thumbnail was never archived', function (): v
 });
 
 it('falls back to YouTube when the archived file has gone missing', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     $video = Video::factory()->for(calmChannel())->archived()->create([
         'thumbnail_url' => 'https://i.ytimg.com/vi/'.CALM_VIDEO_ID.'/hqdefault.jpg',
     ]);
@@ -48,7 +48,7 @@ it('falls back to YouTube when the archived file has gone missing', function ():
 });
 
 it('serves a placeholder when there is no thumbnail anywhere', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     $video = Video::factory()->for(calmChannel())->create([
         'thumbnail_path' => null,
         'thumbnail_url' => null,

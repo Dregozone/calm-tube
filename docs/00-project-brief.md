@@ -6,9 +6,9 @@ are gitignored, so they point here rather than holding anything of their own.
 
 ## What this is
 
-A personal, local-only app for following a hand-picked set of YouTube channels without ever
-visiting youtube.com's homepage, recommendations or sidebar. Single user, runs under Herd,
-never deployed.
+A personal app for following a hand-picked set of YouTube channels without ever
+visiting youtube.com's homepage, recommendations or sidebar. Single user. Developed under Herd
+on SQLite; deployed to Laravel Forge on MySQL, where the filesystem is wiped on every deploy.
 
 | Doc | Read it when |
 | --- | --- |
@@ -54,16 +54,21 @@ Settled — don't relitigate without a reason. Full list in
 
 - **Livewire 4 single-file page components + Flux Free + Tailwind v4.** No new dependencies,
   Composer or npm — the whole design fits what's already installed.
-- **Fortify auth kept**, single user, everything behind `auth` (not `verified`). Registration
-  closed after the one account exists.
-- **SQLite**, and **synchronous refreshes** via `RefreshChannel::dispatchSync()`. There is no
+- **Fortify auth kept**, single user, everything behind `auth`. No registration, password
+  reset or email verification: the one account is made with
+  `php artisan make:login {email} {password?}`, which also resets its password.
+- **SQLite locally, MySQL in production**, and **synchronous refreshes** via `RefreshChannel::dispatchSync()`. There is no
   queue worker; requiring one is the most likely way for this app to appear broken.
 - **RSS is the discovery backbone** (free, no quota); the Data API is enrichment only. Adding
   a channel imports ~15 videos and does not backfill history.
 - **Videos and channels are kept forever.** Only `refresh_runs` are pruned.
 - **Disable, not delete**, is the primary way to stop following a channel.
-- **Thumbnails archived locally** (`maxresdefault` → `mqdefault`) and served by a route, not
-  `storage:link` — symlinks are a Windows trap.
+- **Thumbnails archived in the database** (`maxresdefault` → `mqdefault`), base64 in
+  `archived_images` behind the `images` disk, and served by a route. Production has no disk
+  that survives a deploy, and an archive that can vanish is not one.
+- **The library reached production by push**, once: `calm:move-images` then
+  `calm:push {url}` into an import endpoint that exists only while `CALM_IMPORT_TOKEN` is set
+  and closes itself when the push finishes.
 - **AI runs locally through Ollama** (`laravel/ai`, default `qwen3.5:4b`), no key, optional
   like every other dependency. Its one job so far is the weekly pick: on a channel you have
   switched to it, it may only *reduce* what that channel sends you. It never adds, reorders
@@ -79,8 +84,9 @@ additions:
   in `App\Exceptions\`.
 - **Every external call goes through `Illuminate\Support\Facades\Http`** so `Http::fake()`
   covers the whole surface. `Http::preventStrayRequests()` is on in `tests/Pest.php`.
-- **All tuning belongs in `config/calm-tube.php`.** The `.env` surface is exactly one key:
-  `YOUTUBE_API_KEY`. The app must boot, migrate and run without it.
+- **All tuning belongs in `config/calm-tube.php`.** The `.env` surface is
+  `YOUTUBE_API_KEY`, plus `CALM_IMPORT_TOKEN` only for the one-time import. The app must boot,
+  migrate and run without either.
 - **Degrade, never block.** Every external dependency can fail. Missing key, exhausted quota,
   dead feed, changed YouTube behaviour — each reduces what the app knows and never stops it
   working. The degradation table is in

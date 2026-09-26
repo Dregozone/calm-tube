@@ -72,7 +72,7 @@ it('keeps Shorts off the channel page too', function (): void {
 });
 
 it('refreshes just this channel', function (): void {
-    Storage::fake('local');
+    Storage::fake('images');
     fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
     $channel = calmChannel();
     $other = Channel::factory()->create();
