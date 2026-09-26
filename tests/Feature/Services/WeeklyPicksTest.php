@@ -5,6 +5,8 @@ use App\Models\Channel;
 use App\Models\ChannelDigest;
 use App\Models\Video;
 use App\Services\ChannelSampler;
+use Illuminate\Http\Client\Request;
+use Illuminate\Support\Facades\Http;
 use Laravel\Ai\Exceptions\ProviderConnectionException;
 use Laravel\Ai\Prompts\AgentPrompt;
 
@@ -169,4 +171,35 @@ it('still shows held and passed-over videos on the channel page', function (): v
     expect(Video::inFeed()->count())->toBe(0);
     Livewire\Livewire::test('pages::channels.show', ['channel' => $this->channel])
         ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->sort()->values()->all() === [$passedOver->id, $held->id]);
+});
+
+it('picks through OpenRouter when that is the configured provider', function (): void {
+    config()->set('calm-tube.ai.provider', 'openrouter');
+    config()->set('calm-tube.ai.model', 'google/gemini-2.5-flash-lite');
+    config()->set('ai.providers.openrouter.key', 'sk-or-test');
+    weeklyUpload($this->channel, '2026-09-14 10:00:00');
+    $picked = weeklyUpload($this->channel, '2026-09-16 10:00:00');
+    Http::fake([
+        'openrouter.ai/api/v1/chat/completions' => Http::response([
+            'id' => 'gen-1',
+            'model' => 'google/gemini-2.5-flash-lite',
+            'choices' => [[
+                'finish_reason' => 'stop',
+                'message' => [
+                    'role' => 'assistant',
+                    'content' => json_encode(['picks' => [['number' => 2, 'reason' => 'The one with substance.']]]),
+                ],
+            ]],
+            'usage' => ['prompt_tokens' => 900, 'completion_tokens' => 30, 'total_tokens' => 930],
+        ]),
+    ]);
+
+    settleWeeks($this->channel);
+
+    expect(Video::inFeed()->pluck('id')->all())->toBe([$picked->id])
+        ->and($picked->fresh()->pick_reason)->toBe('The one with substance.')
+        ->and(ChannelDigest::sole()->model)->toBe('google/gemini-2.5-flash-lite');
+    Http::assertSent(fn (Request $request): bool => $request->hasHeader('Authorization', 'Bearer sk-or-test')
+        && $request['model'] === 'google/gemini-2.5-flash-lite'
+        && $request['response_format']['type'] === 'json_schema');
 });

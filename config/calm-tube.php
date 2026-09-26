@@ -2,6 +2,9 @@
 
 declare(strict_types=1);
 
+// Production has no Ollama; an OpenRouter key there is enough to switch over.
+$aiProvider = env('CALM_TUBE_AI_PROVIDER') ?? (filled(env('OPENROUTER_API_KEY')) ? 'openrouter' : 'ollama');
+
 return [
 
     /*
@@ -139,15 +142,21 @@ return [
     | AI
     |--------------------------------------------------------------------------
     |
-    | A local model through Ollama, so nothing leaves the machine and there is
-    | no key to keep. Like every other dependency it is optional: when Ollama
-    | is not running, whatever asked simply waits or falls back.
+    | Locally, a model through Ollama, so nothing leaves the machine and there
+    | is no key to keep. Where Ollama cannot run, setting OPENROUTER_API_KEY
+    | switches to a small hosted model instead; that sends the week's titles,
+    | descriptions, your channel note and your history with the channel to
+    | OpenRouter. Like every other dependency it is optional: when neither
+    | answers, whatever asked simply waits or falls back.
+    |
+    | A non-thinking model on purpose: this is a small choice, and reasoning
+    | models bill for deliberating over it.
     |
     */
 
     'ai' => [
-        'provider' => env('CALM_TUBE_AI_PROVIDER', 'ollama'),
-        'model' => env('CALM_TUBE_AI_MODEL', 'qwen3.5:4b'),
+        'provider' => $aiProvider,
+        'model' => env('CALM_TUBE_AI_MODEL', $aiProvider === 'openrouter' ? 'google/gemini-2.5-flash-lite' : 'qwen3.5:4b'),
 
         // A local model on a laptop is slow, and this runs inside a refresh.
         'timeout' => 90,

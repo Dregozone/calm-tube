@@ -187,4 +187,4 @@ So future sessions don't relitigate these:
 | Autoplay | The video you clicked plays. Nothing ever chooses the next one |
 | Staying current | Opening a stale feed refreshes it after render. No scheduler, no queue worker, nothing to remember to start |
 | Refresh counts | Report what reached the feed, not what was stored. Shorts are stored and never shown, so the two differ constantly |
-| AI | Local Ollama only; weekly pick is the one use, and it only reduces |
+| AI | Local Ollama; OpenRouter (`gemini-2.5-flash-lite`) in production when its key is set; weekly pick is the one use, and it only reduces |

@@ -38,3 +38,64 @@ it('sets the Shorts thresholds to keep genuinely short videos', function (): voi
 it('writes refresh activity to its own log channel', function (): void {
     expect(config('logging.channels.calm'))->not->toBeNull();
 });
+
+/**
+ * Reads the config file afresh with the given environment, as a deploy would.
+ *
+ * @param  array<string, string>  $environment
+ * @return array<string, mixed>
+ */
+function calmConfigWith(array $environment): array
+{
+    $keys = ['CALM_TUBE_AI_PROVIDER', 'CALM_TUBE_AI_MODEL', 'OPENROUTER_API_KEY'];
+    $saved = array_map(fn (string $key): array => [$_ENV[$key] ?? null, $_SERVER[$key] ?? null], array_combine($keys, $keys));
+
+    foreach ($keys as $key) {
+        unset($_ENV[$key], $_SERVER[$key]);
+
+        if (isset($environment[$key])) {
+            $_ENV[$key] = $_SERVER[$key] = $environment[$key];
+        }
+    }
+
+    try {
+        return require config_path('calm-tube.php');
+    } finally {
+        foreach ($saved as $key => [$env, $server]) {
+            unset($_ENV[$key], $_SERVER[$key]);
+
+            if ($env !== null) {
+                $_ENV[$key] = $env;
+            }
+
+            if ($server !== null) {
+                $_SERVER[$key] = $server;
+            }
+        }
+    }
+}
+
+it('asks the local model when there is no OpenRouter key', function (): void {
+    expect(calmConfigWith([])['ai'])->toMatchArray([
+        'provider' => 'ollama',
+        'model' => 'qwen3.5:4b',
+    ]);
+});
+
+it('switches to a small hosted model when an OpenRouter key is set', function (): void {
+    expect(calmConfigWith(['OPENROUTER_API_KEY' => 'sk-or-test'])['ai'])->toMatchArray([
+        'provider' => 'openrouter',
+        'model' => 'google/gemini-2.5-flash-lite',
+    ]);
+});
+
+it('lets an explicit provider and model win over the OpenRouter key', function (): void {
+    expect(calmConfigWith([
+        'OPENROUTER_API_KEY' => 'sk-or-test',
+        'CALM_TUBE_AI_PROVIDER' => 'ollama',
+        'CALM_TUBE_AI_MODEL' => 'llama3.2',
+    ])['ai'])->toMatchArray([
+        'provider' => 'ollama',
+        'model' => 'llama3.2',
+    ]);
+});

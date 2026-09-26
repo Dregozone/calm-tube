@@ -70,7 +70,9 @@ Settled — don't relitigate without a reason. Full list in
   `calm:push {url}` into an import endpoint that exists only while `CALM_IMPORT_TOKEN` is set
   and closes itself when the push finishes.
 - **AI runs locally through Ollama** (`laravel/ai`, default `qwen3.5:4b`), no key, optional
-  like every other dependency. Its one job so far is the weekly pick: on a channel you have
+  like every other dependency. Production has no Ollama, so there an `OPENROUTER_API_KEY`
+  switches it to `google/gemini-2.5-flash-lite` — a deliberate exception to "nothing leaves the
+  machine", costing pennies a year; without the key, weeks settle by length. Its one job so far is the weekly pick: on a channel you have
   switched to it, it may only *reduce* what that channel sends you. It never adds, reorders
   or recommends. See [04-routes-and-ui.md](04-routes-and-ui.md#picking-a-channels-week).
 
@@ -85,8 +87,8 @@ additions:
 - **Every external call goes through `Illuminate\Support\Facades\Http`** so `Http::fake()`
   covers the whole surface. `Http::preventStrayRequests()` is on in `tests/Pest.php`.
 - **All tuning belongs in `config/calm-tube.php`.** The `.env` surface is
-  `YOUTUBE_API_KEY`, plus `CALM_IMPORT_TOKEN` only for the one-time import. The app must boot,
-  migrate and run without either.
+  `YOUTUBE_API_KEY`, `OPENROUTER_API_KEY` in production only, and `CALM_IMPORT_TOKEN` only for
+  the one-time import. The app must boot, migrate and run without any of them.
 - **Degrade, never block.** Every external dependency can fail. Missing key, exhausted quota,
   dead feed, changed YouTube behaviour — each reduces what the app knows and never stops it
   working. The degradation table is in
