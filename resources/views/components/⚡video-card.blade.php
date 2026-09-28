@@ -119,11 +119,13 @@ new class extends Component
     </div>
 
     {{-- The same actions for fingers, which have no hover: always shown,
-         each a 44px target. --}}
+         each a 44px target, and each confirmed first because a stray tap
+         while scrolling is easy. --}}
     <div class="-mr-2.5 mt-1 hidden items-center justify-end touch:flex">
         <button
             type="button"
             wire:click="toggleWatched"
+            wire:confirm="{{ $video->isWatched() ? __('Mark this video as unwatched?') : __('Mark this video as watched?') }}"
             class="inline-flex size-11 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 focus-visible:outline-2 focus-visible:outline-zinc-500 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
             aria-label="{{ $video->isWatched() ? __('Mark unwatched') : __('Mark watched') }}"
         >
@@ -137,6 +139,7 @@ new class extends Component
         <button
             type="button"
             wire:click="hide"
+            wire:confirm="{{ __('Hide this video from your feed?') }}"
             class="inline-flex size-11 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 focus-visible:outline-2 focus-visible:outline-zinc-500 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
             aria-label="{{ __('Hide from feed') }}"
         >
@@ -147,6 +150,7 @@ new class extends Component
             <button
                 type="button"
                 wire:click="snoozeChannel"
+                wire:confirm="{{ __('Snooze :channel for :days days? Nothing new from it will join your feed until then.', ['channel' => $video->channel->display_name, 'days' => config('calm-tube.feed.snooze_days')]) }}"
                 class="inline-flex size-11 items-center justify-center rounded-lg text-zinc-500 hover:bg-zinc-100 hover:text-zinc-800 focus-visible:outline-2 focus-visible:outline-zinc-500 dark:text-zinc-400 dark:hover:bg-zinc-800 dark:hover:text-white"
                 aria-label="{{ __('Snooze :channel for :days days', ['channel' => $video->channel->display_name, 'days' => config('calm-tube.feed.snooze_days')]) }}"
             >
