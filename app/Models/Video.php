@@ -265,6 +265,9 @@ class Video extends Model
      * speed applied, and its outro plug left off. The watch page shows the
      * real duration; this is only an at-a-glance answer to "have I got time?"
      *
+     * Once you are resumably into an unwatched video, only what is left counts: the answer
+     * is the time still needed, not the time it would take from the start.
+     *
      * Worked out on every read rather than stored, so changing a channel's
      * speed changes every one of its videos at once.
      *
@@ -281,6 +284,10 @@ class Video extends Model
             $seconds = $outro > 0 && $outro < $this->duration_seconds
                 ? $this->duration_seconds - $outro
                 : $this->duration_seconds;
+
+            if (! $this->isWatched() && $this->isResumable()) {
+                $seconds = max(0, $seconds - (int) $this->resume_seconds);
+            }
 
             return (int) round($seconds / $this->channel->effective_playback_rate);
         });

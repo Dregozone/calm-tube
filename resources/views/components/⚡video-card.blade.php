@@ -54,12 +54,14 @@ new class extends Component
                 />
 
                 {{-- How long it will take you, not how long it is: the channel's
-                     speed and outro skip are applied. The watch page has the
-                     real duration. --}}
+                     speed and outro skip are applied, and what you have already
+                     watched is taken off. The watch page has the real duration. --}}
                 @if ($video->watching_time_for_humans)
                     <span
                         class="absolute bottom-1.5 right-1.5 rounded bg-black/80 px-1.5 py-0.5 text-xs font-medium text-white tabular-nums"
-                        @if ($video->watching_seconds !== $video->duration_seconds)
+                        @if ($video->isResumable() && ! $video->isWatched())
+                            title="{{ __(':time left to watch here; the video is :length long.', ['time' => $video->watching_time_for_humans, 'length' => $video->duration_for_humans]) }}"
+                        @elseif ($video->watching_seconds !== $video->duration_seconds)
                             title="{{ __('Takes :time to watch here; the video is :length long.', ['time' => $video->watching_time_for_humans, 'length' => $video->duration_for_humans]) }}"
                         @endif
                     >

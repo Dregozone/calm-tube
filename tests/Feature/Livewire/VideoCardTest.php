@@ -64,6 +64,50 @@ describe('time to watch', function (): void {
 
         Livewire::test('video-card', ['video' => $video])->assertSee('0:20');
     });
+
+    it('shows only the time left once you are into it', function (): void {
+        // 10:00 at 2× is 5:00; 4:00 of the video watched is 2:00 of that.
+        $video = Video::factory()
+            ->for(calmChannel(['playback_rate' => 2.0]))
+            ->create(['duration_seconds' => 600, 'resume_seconds' => 240]);
+
+        Livewire::test('video-card', ['video' => $video])
+            ->assertSee('3:00')
+            ->assertSee('3:00 left to watch here');
+    });
+
+    it('takes the outro off before what is left', function (): void {
+        $video = Video::factory()
+            ->for(calmChannel(['playback_rate' => 2.0, 'outro_seconds' => 20]))
+            ->create(['duration_seconds' => 620, 'resume_seconds' => 240]);
+
+        Livewire::test('video-card', ['video' => $video])->assertSee('3:00');
+    });
+
+    it('never counts below nothing when you stopped inside the outro', function (): void {
+        $video = Video::factory()
+            ->for(calmChannel(['outro_seconds' => 60]))
+            ->create(['duration_seconds' => 600, 'resume_seconds' => 570]);
+
+        expect($video->watching_seconds)->toBe(0);
+    });
+
+    it('shows the whole time when you are not far enough in to resume', function (): void {
+        $video = Video::factory()
+            ->for(calmChannel(['playback_rate' => 2.0]))
+            ->create(['duration_seconds' => 600, 'resume_seconds' => 8]);
+
+        expect($video->watching_seconds)->toBe(300);
+    });
+
+    it('shows the whole time for a watched video', function (): void {
+        $video = Video::factory()
+            ->for(calmChannel(['playback_rate' => 2.0]))
+            ->watched()
+            ->create(['duration_seconds' => 600, 'resume_seconds' => 240]);
+
+        expect($video->watching_seconds)->toBe(300);
+    });
 });
 
 it('serves the thumbnail from the archive rather than YouTube', function (): void {
