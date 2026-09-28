@@ -58,6 +58,16 @@ describe('the embedded player', function (): void {
         'the JS API, for detecting the end of the video' => ['enablejsapi=1'],
     ]);
 
+    it('tells the player the origin the page was served from, whatever APP_URL says', function (): void {
+        config()->set('app.url', 'http://calm-tube.test');
+        $video = watchable();
+
+        // A mismatch leaves the player deaf to the JS API, so speed is ignored.
+        $this->get('https://calm-tube.example/watch/'.$video->youtube_video_id)
+            ->assertSee('origin='.urlencode('https://calm-tube.example'), escape: false)
+            ->assertDontSee('origin='.urlencode('http://calm-tube.test'), escape: false);
+    });
+
     it('never loops', function (): void {
         $video = watchable();
 

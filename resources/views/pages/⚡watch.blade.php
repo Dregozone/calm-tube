@@ -201,7 +201,10 @@ new class extends Component
             'iv_load_policy' => 3,
             'enablejsapi' => 1,
             'autoplay' => $this->shouldAutoplay() ? 1 : 0,
-            'origin' => config('app.url'),
+            // The page's own origin, not APP_URL: the player posts its API
+            // messages here, and one scheme or host out means the browser
+            // drops them, so the video plays but ignores speed and events.
+            'origin' => request()->getSchemeAndHttpHost(),
         ]);
     }
 
