@@ -227,4 +227,21 @@ return [
         'minimum_token_length' => 32,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Embedding
+    |--------------------------------------------------------------------------
+    |
+    | Sites allowed to show Calm Tube in a frame, besides Calm Tube itself:
+    | origins separated by spaces, e.g. the Life OS game on
+    | "http://localhost:5173 http://localhost:4173". Framed, you log in once
+    | and stay logged in there, on a session kept apart from your normal one
+    | (see EmbeddedSession). Unset, nothing else may frame it.
+    |
+    */
+
+    'embed' => [
+        'origins' => array_values(array_filter(explode(' ', (string) env('CALM_TUBE_EMBED_ORIGINS', '')))),
+    ],
+
 ];

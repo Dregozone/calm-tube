@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EmbeddedSession;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -22,6 +23,9 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->trimStrings(except: [$imported]);
         $middleware->convertEmptyStringsToNull(except: [$imported]);
+
+        // Before the session starts: a framed request gets its own session cookie.
+        $middleware->web(prepend: [EmbeddedSession::class]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(
