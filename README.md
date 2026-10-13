@@ -4,7 +4,8 @@ A personal app for following a hand-picked set of YouTube channels without ever 
 youtube.com's homepage, recommendations or sidebar.
 
 One reverse-chronological list of what the channels you chose have published. No algorithm,
-no autoplay, no "up next", no Shorts. Single user, runs locally under Herd, never deployed.
+no autoplay, no "up next", no Shorts. Single user: developed locally under Herd, and deployed
+on Laravel Forge.
 
 Three rules the app is built around, and none of them bend:
 
@@ -39,7 +40,8 @@ remember:
 - The **Refresh all** button always works, and holds nothing back.
 
 The only thing you lose without a scheduler is refreshing while the app is closed, and the
-nightly housekeeping. If you want those, run it in a second terminal:
+nightly housekeeping. On Forge the scheduler runs them. Locally, if you want them, run it in a
+second terminal:
 
 ```bash
 php artisan schedule:work
@@ -81,6 +83,21 @@ intermittently since late 2025, so refreshes are currently running on the upload
 which costs one quota unit per channel. Roughly 600 units a day at hourly refreshes, against
 a 10,000 unit allowance.
 
+### Personal Assistant
+
+The **Videos** page reads Personal Assistant's reading list. Add its address and the
+identifier and token its reading list API checks:
+
+```
+READING_LIST_URL=https://personal-assistant.example
+READING_LIST_IDENTIFIER=
+READING_LIST_TOKEN=
+```
+
+Set the same identifier and token in Personal Assistant's own `.env`
+(`READING_LIST_API_IDENTIFIER`, `READING_LIST_API_TOKEN`). Without them the rest of the app is
+unaffected, and the Videos page says what is missing.
+
 ---
 
 ## Commands
@@ -93,11 +110,13 @@ a 10,000 unit allowance.
 | `php artisan calm:archive` | Download thumbnails and avatars not yet stored locally |
 | `php artisan calm:sample` | Re-apply channel sample limits across their whole history |
 | `php artisan calm:prune-runs` | Trim refresh history older than 30 days |
+| `php artisan calm:reading-list` | Fetch the YouTube videos on Personal Assistant's reading list |
 
 `calm:prune-runs` is the only thing in the app that deletes on a schedule, and it only touches
 operational history. Videos and channels are kept forever.
 
-Scheduled: refresh hourly, enrich at 04:00, archive at 04:30, prune Mondays at 05:00.
+Scheduled: refresh hourly, enrich at 04:00, archive at 04:30, prune Mondays at 05:00, reading
+list at 05:30.
 
 ---
 
@@ -142,6 +161,29 @@ thumbnail, without leaving the page.
 
 Mixes are kept apart from your channels and never appear in the feed. Adding one needs no API
 key.
+
+---
+
+## Videos from your reading list
+
+**Videos** in the sidebar shows the YouTube videos on Personal Assistant's reading list, in its
+order: the item's own title, the video's thumbnail and length, its category and how far through
+it the list says you are. Clicking one plays it here, in the usual player.
+
+- Only real video links count: `youtube.com/watch`, `youtu.be` and `/live`. Shorts never do,
+  and anything at 90% or more is done and left off.
+- The list is kept here, so the page works when Personal Assistant doesn't answer, with
+  "Last updated …" beside a **Refresh** button. It refreshes itself once a day on the
+  scheduler, and when you open the page and it is more than a day old.
+- A video from a channel you don't follow is archived like any other (that takes the API key),
+  but the channel never joins your feed or your channels list. Add it on the Channels page if
+  you want to follow it after all.
+
+When a reading list video ends (or passes 95%), there is no countdown back to your list. Instead:
+*"Nice one, that's one off the list!"*, with **Mark as watched**, which sets the item to 90% in
+Personal Assistant. Finishing it off there stays Personal Assistant's job; at 90% it is plain
+to see when you scroll the list. If Personal Assistant can't be reached it says so and the
+video stays on the page. Every other video ends exactly as before.
 
 ---
 
@@ -193,5 +235,12 @@ composer quality
 commit.
 
 The test suite blocks the network (`Http::preventStrayRequests()`), so a forgotten fake fails
-loudly instead of reaching YouTube. Fixtures live in `tests/Fixtures/youtube/`, with one fake
-helper per endpoint.
+loudly instead of reaching YouTube or Personal Assistant. Fixtures live in
+`tests/Fixtures/youtube/`, with one fake helper per endpoint.
+
+`tests/Browser` drives the watch page in a real browser through Pest's browser plugin, with a
+stand-in for YouTube's player. It needs Playwright's Chromium once:
+
+```bash
+npx playwright install chromium
+```

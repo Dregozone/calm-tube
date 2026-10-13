@@ -229,7 +229,7 @@ new #[Title('Feed')] class extends Component
         return [
             'videos' => $this->videos(),
             'channels' => $channels,
-            'followsNothing' => Channel::query()->count() === 0,
+            'followsNothing' => Channel::query()->followed()->doesntExist(),
             // "All caught up" is only true if there was anything to catch up
             // on. An empty library needs a refresh, not congratulations.
             'hasVideos' => Video::query()->inFeed()->exists(),

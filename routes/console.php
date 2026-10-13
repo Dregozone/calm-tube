@@ -41,6 +41,14 @@ Schedule::command('calm:archive')
     ->withoutOverlapping();
 
 /*
+ * Once a day is plenty for a reading list. Opening the videos page also
+ * refreshes a copy older than a day, and its Refresh button always works.
+ */
+Schedule::command('calm:reading-list')
+    ->dailyAt('05:30')
+    ->withoutOverlapping();
+
+/*
  * The only scheduled deletion in the app, and it touches nothing you archived:
  * refresh runs are a record of what the app did, not of what you follow.
  */

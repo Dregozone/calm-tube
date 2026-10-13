@@ -22,6 +22,7 @@ channels ──< videos
 | `avatar_path` | string | yes | null | Archived file, relative to the configured disk |
 | `uploads_playlist_id` | string(32) | yes | null | Stored for possible future backfill; unused |
 | `is_enabled` | boolean | no | `true` | Disabled channels are not refreshed and not shown in the feed |
+| `is_followed` | boolean | no | `true` | False for a channel archived only because a reading list video came from it: also disabled, and left off the channels page |
 | `playback_rate` | float | yes | `null` | Speed every video from this channel plays at; null is normal |
 | `outro_seconds` | smallint | yes | `null` | Length of the plug that ends every upload; the video counts as finished that many seconds early. Null plays to the end |
 | `sample_limit` | integer | yes | `null` | Uploads a day that reach the feed; null is all of them |
@@ -145,6 +146,25 @@ Long music videos played from the music page. Standalone: no channel, never in t
 | `duration_seconds` | int | yes | `null` | From `videos.list` with a key, otherwise from the player on first play |
 | `resume_seconds` | int | yes | `null` | Where playback got to |
 | `last_played_at` | timestamp | yes | `null` | |
+
+## `reading_list_items`
+
+The YouTube videos on Personal Assistant's reading list, as it last answered. A copy, not an
+archive: every successful refresh replaces it. The videos themselves are archived in `videos`.
+
+| Column | Type | Nullable | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | bigint | no | | |
+| `reading_list_id` | bigint | no | | Personal Assistant's id, which progress is written back to. Unique |
+| `youtube_video_id` | string(16) | no | | Indexed; joins to `videos.youtube_video_id` |
+| `title` | string | no | | The reading list item's title, which is what the card shows |
+| `url` | text | no | | As the list has it |
+| `category` | string | yes | `null` | |
+| `percent_complete` | tinyint | no | `0` | 90 and over is done, and off the videos page |
+| `position` | int | no | `0` | The list's own order |
+
+When it was last refreshed is kept in the cache (`calm-tube.reading-list.refreshed_at`); a
+cleared cache only means the next visit refreshes it.
 
 ## `refresh_runs`
 

@@ -13,6 +13,7 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('channels', 'pages::channels.index')->name('channels.index');
     Route::livewire('channels/{channel}', 'pages::channels.show')->name('channels.show');
     Route::livewire('music', 'pages::music')->name('music');
+    Route::livewire('videos', 'pages::videos')->name('videos.index');
 
     Route::get('thumbnails/{video}', ThumbnailController::class)->name('thumbnails.show');
     Route::get('avatars/{channel}', AvatarController::class)->name('avatars.show');

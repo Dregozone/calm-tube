@@ -21,6 +21,10 @@
                     {{ __('Channels') }}
                 </flux:sidebar.item>
 
+                <flux:sidebar.item icon="play-circle" :href="route('videos.index')" :current="request()->routeIs('videos.index')" wire:navigate>
+                    {{ __('Videos') }}
+                </flux:sidebar.item>
+
                 <flux:sidebar.item icon="musical-note" :href="route('music')" :current="request()->routeIs('music')" wire:navigate>
                     {{ __('Music') }}
                 </flux:sidebar.item>

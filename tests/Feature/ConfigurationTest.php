@@ -28,6 +28,9 @@ it('defines the settings the app tunes itself with', function (string $key): voi
     'calm-tube.images.minimum_bytes',
     'calm-tube.images.disk',
     'calm-tube.feed.per_page',
+    'calm-tube.reading_list.refresh_after_hours',
+    'calm-tube.reading_list.done_percent',
+    'services.reading_list.url',
 ]);
 
 it('sets the Shorts thresholds to keep genuinely short videos', function (): void {

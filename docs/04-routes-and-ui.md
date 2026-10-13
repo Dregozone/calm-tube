@@ -13,6 +13,7 @@ All app routes sit behind `auth`. Livewire 4 page components are registered with
 | GET | `/channels` | `pages::channels.index` | `channels.index` |
 | GET | `/channels/{channel}` | `pages::channels.show` | `channels.show` |
 | GET | `/music` | `pages::music` | `music` |
+| GET | `/videos` | `pages::videos` | `videos.index` |
 | GET | `/thumbnails/{video}` | `ThumbnailController` | `thumbnails.show` |
 | GET | `/avatars/{channel}` | `AvatarController` | `avatars.show` |
 | GET | `/music/{mix}/thumbnail` | `MixThumbnailController` | `mixes.thumbnail` |
@@ -27,6 +28,7 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('channels', 'pages::channels.index')->name('channels.index');
     Route::livewire('channels/{channel}', 'pages::channels.show')->name('channels.show');
     Route::livewire('music', 'pages::music')->name('music');
+    Route::livewire('videos', 'pages::videos')->name('videos.index');
 
     Route::get('thumbnails/{video}', ThumbnailController::class)->name('thumbnails.show');
     Route::get('avatars/{channel}', AvatarController::class)->name('avatars.show');
@@ -335,6 +337,36 @@ Every way out of it: "Stay here", "Go now", the panel's own buttons, clicking th
 Escape. Its length is `calm-tube.player.countdown_seconds`.
 
 Leaving is automatic; arriving anywhere new never is.
+
+A video opened from the videos page (`?from=videos`) returns there instead of to the feed.
+
+### The celebration
+
+A video still to watch on your reading list (see Screen 6) ends in a celebration instead of
+the countdown, wherever it was opened from:
+
+```
+             ┌────────────────────────────────────────┐
+             │                                        │
+             │                   🎉                   │
+             │   Nice one, that's one off the list!   │
+             │                                        │
+             │    <the reading list item's title>     │
+             │                                        │
+             │          [ Mark as watched ]           │
+             │          [     Not now     ]           │
+             │                                        │
+             └────────────────────────────────────────┘
+```
+
+It counts as finished at the real end, at the channel's outro, or once it passes
+`calm-tube.reading_list.finished_at_percent` (95%), since the last few percent are usually
+credits. Nothing leaves the page by itself.
+
+**Mark as watched** sets the item to 90% in Personal Assistant. That is as far as anything but
+Personal Assistant may take an item — it alone completes them — and at 90% the row is plainly
+finished when you scroll the list there. Success says so and the card leaves the videos page;
+failure says so and the card stays. **Not now**, the backdrop or Escape closes it.
 
 ### Watch states
 
@@ -655,6 +687,33 @@ time, never belongs to a followed channel, and never reaches the feed.
   have to notice; nothing else is ever chosen for you.
 - **Leaving** the page stops the music (and keeps your place). Space plays or pauses the last
   mix you played.
+
+## Screen 6 — Videos (`/videos`)
+
+The YouTube videos on Personal Assistant's reading list, which is mostly articles: clearing its
+videos here is an easy way into the backlog.
+
+- **Reading the list.** Personal Assistant's existing API, as it is:
+  `GET /api/readingList/{identifier}/{token}` for the list, and
+  `PATCH /api/readingList/{identifier}/{token}/{item}` with `percent_complete` (0–99) to write
+  progress back. The address, identifier and token are `services.reading_list` in config.
+- **Which items.** Only links to a video: `youtube.com/watch`, `youtu.be` and `/live`. Shorts
+  are excluded (Calm Tube's rule, not the list's), and so is any item at 90% or more, which is
+  done as far as this page is concerned. A video that turns out to be a Short once archived is
+  left out too.
+- **Each card.** The reading list item's own title, the video's archived thumbnail and the
+  time it takes to watch, its category, and its progress on the list. Clicking plays it in the
+  ordinary watch page. In the list's own order, which is its priority.
+- **The copy.** The list is kept in `reading_list_items`, so the page works when Personal
+  Assistant does not answer, with "Last updated …" beside the **Refresh** button. It is
+  refreshed by `calm:reading-list` once a day, when the page is opened and the copy is more
+  than a day old (after it has rendered, through `wire:init`), and whenever Refresh is pressed.
+  A failed refresh says so and leaves the copy as it was.
+- **Unfollowed channels.** A reading list video archived the first time it is seen, like any
+  other, needs the Data API to learn its channel. A channel you do not follow is archived with
+  it as **unfollowed** (`is_followed = false`, `is_enabled = false`): never refreshed, never in
+  the feed, and not on the channels page. Adding that channel from the channels page later
+  follows it. Without an API key the card offers YouTube instead, until a key is set.
 
 ## Image routes
 
