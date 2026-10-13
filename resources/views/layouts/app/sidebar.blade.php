@@ -25,6 +25,10 @@
                     {{ __('Videos') }}
                 </flux:sidebar.item>
 
+                <flux:sidebar.item icon="academic-cap" :href="route('courses.index')" :current="request()->routeIs('courses.index')" wire:navigate>
+                    {{ __('Courses') }}
+                </flux:sidebar.item>
+
                 <flux:sidebar.item icon="musical-note" :href="route('music')" :current="request()->routeIs('music')" wire:navigate>
                     {{ __('Music') }}
                 </flux:sidebar.item>

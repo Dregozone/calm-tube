@@ -2,6 +2,7 @@
 
 use App\Exceptions\ReadingListException;
 use App\Models\Channel;
+use App\Models\ReadingListCourse;
 use App\Models\ReadingListItem;
 use App\Models\Video;
 use App\Services\ReadingList\ReadingListSync;
@@ -140,6 +141,71 @@ describe('the copy kept here', function (): void {
         rescue(fn () => sync()->refresh(), report: false);
 
         expect(sync()->lastRefreshedAt())->toBeNull();
+    });
+});
+
+describe('picking out the courses', function (): void {
+    it('keeps items in the Course category, whatever their case and spacing', function (?string $category, bool $kept): void {
+        fakeReadingList([
+            readingListItem(1, 'https://example.com/course', ['category' => $category]),
+        ]);
+
+        sync()->refresh();
+
+        expect(ReadingListCourse::query()->exists())->toBe($kept);
+    })->with([
+        'as written' => ['Course', true],
+        'lower case' => ['course', true],
+        'upper case' => ['COURSE', true],
+        'with spaces around it' => ['  Course ', true],
+        'plural' => ['Courses', false],
+        'another category' => ['Learning', false],
+        'no category' => [null, false],
+    ]);
+
+    it('keeps what the card needs from the reading list', function (): void {
+        fakeReadingList([
+            readingListItem(1, 'https://example.com/an-article'),
+            readingListItem(7, 'https://example.com/laravel-course', [
+                'title' => 'Laravel from scratch',
+                'category' => 'Course',
+                'notes' => 'Skip the first module',
+                'important' => 8,
+                'urgent' => 3,
+                'estimated_duration' => 390,
+                'percent_complete' => 25,
+            ]),
+        ]);
+
+        sync()->refresh();
+
+        expect(ReadingListCourse::query()->sole())
+            ->reading_list_id->toBe(7)
+            ->title->toBe('Laravel from scratch')
+            ->url->toBe('https://example.com/laravel-course')
+            ->notes->toBe('Skip the first module')
+            ->priority->toBe(24)
+            ->estimated_minutes->toBe(390)
+            ->percent_complete->toBe(25)
+            ->position->toBe(1);
+    });
+
+    it('drops a course that has left the list', function (): void {
+        ReadingListCourse::factory()->create(['reading_list_id' => 3]);
+        fakeReadingList([]);
+
+        sync()->refresh();
+
+        expect(ReadingListCourse::query()->count())->toBe(0);
+    });
+
+    it('leaves the courses as they were when Personal Assistant is down', function (): void {
+        ReadingListCourse::factory()->create(['title' => 'Kept']);
+        fakeReadingListDown();
+
+        expect(fn () => sync()->refresh())->toThrow(ReadingListException::class);
+
+        expect(ReadingListCourse::query()->sole()->title)->toBe('Kept');
     });
 });
 

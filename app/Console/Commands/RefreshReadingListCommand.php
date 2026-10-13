@@ -9,14 +9,14 @@ use Illuminate\Console\Command;
 use Illuminate\Support\Str;
 
 /**
- * Fetches the YouTube videos on Personal Assistant's reading list, and
- * archives any not seen before.
+ * Fetches the YouTube videos and courses on Personal Assistant's reading
+ * list, and archives any video not seen before.
  */
 class RefreshReadingListCommand extends Command
 {
     protected $signature = 'calm:reading-list';
 
-    protected $description = "Fetch the YouTube videos on Personal Assistant's reading list";
+    protected $description = "Fetch the YouTube videos and courses on Personal Assistant's reading list";
 
     public function handle(ReadingListSync $sync): int
     {
