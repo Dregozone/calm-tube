@@ -96,15 +96,24 @@ class ReadingListClient
             return null;
         }
 
-        $percent = data_get($item, 'percent_complete');
+        $duration = $this->number(data_get($item, 'estimated_duration'));
 
         return new ReadingListEntry(
             id: $id,
             title: $title,
             url: $this->text(data_get($item, 'url')),
             category: $this->text(data_get($item, 'category')),
-            percentComplete: is_numeric($percent) ? (int) $percent : 0,
+            percentComplete: $this->number(data_get($item, 'percent_complete')) ?? 0,
+            notes: $this->text(data_get($item, 'notes')),
+            important: $this->number(data_get($item, 'important')) ?? 0,
+            urgent: $this->number(data_get($item, 'urgent')) ?? 0,
+            estimatedDuration: $duration !== null && $duration > 0 ? $duration : null,
         );
+    }
+
+    private function number(mixed $value): ?int
+    {
+        return is_numeric($value) ? (int) $value : null;
     }
 
     /**

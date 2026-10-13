@@ -3,6 +3,7 @@
 namespace App\Services\ReadingList;
 
 use App\Exceptions\ReadingListException;
+use App\Models\ReadingListCourse;
 use App\Models\ReadingListItem;
 use App\Models\Video;
 use App\Support\ReadingListEntry;
@@ -12,11 +13,12 @@ use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 
 /**
- * Keeps Calm Tube's copy of the reading list's YouTube videos, and writes
- * finishing one back to Personal Assistant.
+ * Keeps Calm Tube's copy of the reading list's YouTube videos and courses,
+ * and writes finishing a video back to Personal Assistant.
  *
- * The copy is what the videos page reads, so it works whether or not
- * Personal Assistant answers. A failed refresh leaves it exactly as it was.
+ * The copy is what the videos and courses pages read, so they work whether
+ * or not Personal Assistant answers. A failed refresh leaves it exactly as it
+ * was.
  */
 class ReadingListSync
 {
@@ -35,13 +37,14 @@ class ReadingListSync
 
     /**
      * Replaces the copy with the list as it is now, keeping only YouTube
-     * videos, then archives any video not seen before.
+     * videos and courses, then archives any video not seen before.
      *
      * @throws ReadingListException
      */
     public function refresh(): void
     {
         $rows = [];
+        $courses = [];
 
         foreach ($this->client->items() as $position => $entry) {
             $videoId = $this->urls->videoId($entry->url);
@@ -49,19 +52,15 @@ class ReadingListSync
             if ($videoId !== null) {
                 $rows[] = $this->toRow($entry, $videoId, $position);
             }
+
+            if (ReadingListCourse::isCourse($entry->category)) {
+                $courses[] = $this->toCourseRow($entry, $position);
+            }
         }
 
-        DB::transaction(function () use ($rows): void {
-            ReadingListItem::query()
-                ->whereNotIn('reading_list_id', array_column($rows, 'reading_list_id'))
-                ->delete();
-
-            foreach ($rows as $row) {
-                ReadingListItem::query()->updateOrCreate(
-                    ['reading_list_id' => $row['reading_list_id']],
-                    $row,
-                );
-            }
+        DB::transaction(function () use ($rows, $courses): void {
+            $this->replace(ReadingListItem::class, $rows);
+            $this->replace(ReadingListCourse::class, $courses);
         });
 
         Cache::forever(self::REFRESHED_AT_KEY, now()->toIso8601String());
@@ -115,6 +114,24 @@ class ReadingListSync
     }
 
     /**
+     * @param  class-string<ReadingListItem|ReadingListCourse>  $model
+     * @param  list<array<string, mixed>>  $rows
+     */
+    private function replace(string $model, array $rows): void
+    {
+        $model::query()
+            ->whereNotIn('reading_list_id', array_column($rows, 'reading_list_id'))
+            ->delete();
+
+        foreach ($rows as $row) {
+            $model::query()->updateOrCreate(
+                ['reading_list_id' => $row['reading_list_id']],
+                $row,
+            );
+        }
+    }
+
+    /**
      * @return array{reading_list_id: int, youtube_video_id: string, title: string, url: string, category: string|null, percent_complete: int, position: int}
      */
     private function toRow(ReadingListEntry $entry, string $videoId, int $position): array
@@ -125,6 +142,24 @@ class ReadingListSync
             'title' => $entry->title,
             'url' => (string) $entry->url,
             'category' => $entry->category,
+            'percent_complete' => max(0, min(100, $entry->percentComplete)),
+            'position' => $position,
+        ];
+    }
+
+    /**
+     * @return array{reading_list_id: int, title: string, url: string|null, notes: string|null, important: int, urgent: int, estimated_minutes: int|null, percent_complete: int, position: int}
+     */
+    private function toCourseRow(ReadingListEntry $entry, int $position): array
+    {
+        return [
+            'reading_list_id' => $entry->id,
+            'title' => $entry->title,
+            'url' => $entry->url,
+            'notes' => $entry->notes,
+            'important' => max(0, min(255, $entry->important)),
+            'urgent' => max(0, min(255, $entry->urgent)),
+            'estimated_minutes' => $entry->estimatedDuration,
             'percent_complete' => max(0, min(100, $entry->percentComplete)),
             'position' => $position,
         ];

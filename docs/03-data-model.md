@@ -164,8 +164,27 @@ archive: every successful refresh replaces it. The videos themselves are archive
 | `percent_complete` | tinyint | no | `0` | 90 and over is done, and off the videos page |
 | `position` | int | no | `0` | The list's own order |
 
-When it was last refreshed is kept in the cache (`calm-tube.reading-list.refreshed_at`); a
-cleared cache only means the next visit refreshes it.
+## `reading_list_courses`
+
+The courses on Personal Assistant's reading list (category `Course`, compared
+case-insensitively and trimmed), as it last answered. Filled by the same refresh as
+`reading_list_items`, and replaced the same way.
+
+| Column | Type | Nullable | Default | Notes |
+| --- | --- | --- | --- | --- |
+| `id` | bigint | no | | |
+| `reading_list_id` | bigint | no | | Personal Assistant's id. Unique |
+| `title` | string | no | | |
+| `url` | text | yes | `null` | Opened in a new tab |
+| `notes` | text | yes | `null` | |
+| `important` | tinyint | no | `0` | Priority is `important × urgent`, as in Personal Assistant |
+| `urgent` | tinyint | no | `0` | |
+| `estimated_minutes` | int | yes | `null` | Personal Assistant's `estimated_duration`, which is in minutes |
+| `percent_complete` | tinyint | no | `0` | 90 and over is finished |
+| `position` | int | no | `0` | The list's own order |
+
+When the reading list was last refreshed is kept in the cache
+(`calm-tube.reading-list.refreshed_at`); a cleared cache only means the next visit refreshes it.
 
 ## `refresh_runs`
 

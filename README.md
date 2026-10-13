@@ -85,7 +85,7 @@ a 10,000 unit allowance.
 
 ### Personal Assistant
 
-The **Videos** page reads Personal Assistant's reading list. Add its address and the
+The **Videos** and **Courses** pages read Personal Assistant's reading list. Add its address and the
 identifier and token its reading list API checks:
 
 ```
@@ -110,7 +110,7 @@ unaffected, and the Videos page says what is missing.
 | `php artisan calm:archive` | Download thumbnails and avatars not yet stored locally |
 | `php artisan calm:sample` | Re-apply channel sample limits across their whole history |
 | `php artisan calm:prune-runs` | Trim refresh history older than 30 days |
-| `php artisan calm:reading-list` | Fetch the YouTube videos on Personal Assistant's reading list |
+| `php artisan calm:reading-list` | Fetch the YouTube videos and courses on Personal Assistant's reading list |
 
 `calm:prune-runs` is the only thing in the app that deletes on a schedule, and it only touches
 operational history. Videos and channels are kept forever.
@@ -184,6 +184,15 @@ When a reading list video ends (or passes 95%), there is no countdown back to yo
 Personal Assistant. Finishing it off there stays Personal Assistant's job; at 90% it is plain
 to see when you scroll the list. If Personal Assistant can't be reached it says so and the
 video stays on the page. Every other video ends exactly as before.
+
+## Courses from your reading list
+
+**Courses** in the sidebar shows every reading list item in the `Course` category (any case,
+spaces ignored): its title, how long it takes, a progress bar, your notes and an **Open
+course** link that opens it in a new tab. Courses you have started come first, then the rest
+by Personal Assistant's priority (important × urgent); anything at 90% or more waits in a
+collapsed **Finished** group. It shares the Videos page's copy of the list, so the same fetch,
+daily refresh and **Refresh** button keep both up to date.
 
 ---
 

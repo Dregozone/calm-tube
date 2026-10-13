@@ -14,6 +14,7 @@ All app routes sit behind `auth`. Livewire 4 page components are registered with
 | GET | `/channels/{channel}` | `pages::channels.show` | `channels.show` |
 | GET | `/music` | `pages::music` | `music` |
 | GET | `/videos` | `pages::videos` | `videos.index` |
+| GET | `/courses` | `pages::courses` | `courses.index` |
 | GET | `/thumbnails/{video}` | `ThumbnailController` | `thumbnails.show` |
 | GET | `/avatars/{channel}` | `AvatarController` | `avatars.show` |
 | GET | `/music/{mix}/thumbnail` | `MixThumbnailController` | `mixes.thumbnail` |
@@ -29,6 +30,7 @@ Route::middleware('auth')->group(function (): void {
     Route::livewire('channels/{channel}', 'pages::channels.show')->name('channels.show');
     Route::livewire('music', 'pages::music')->name('music');
     Route::livewire('videos', 'pages::videos')->name('videos.index');
+    Route::livewire('courses', 'pages::courses')->name('courses.index');
 
     Route::get('thumbnails/{video}', ThumbnailController::class)->name('thumbnails.show');
     Route::get('avatars/{channel}', AvatarController::class)->name('avatars.show');
@@ -714,6 +716,25 @@ videos here is an easy way into the backlog.
   it as **unfollowed** (`is_followed = false`, `is_enabled = false`): never refreshed, never in
   the feed, and not on the channels page. Adding that channel from the channels page later
   follows it. Without an API key the card offers YouTube instead, until a key is set.
+
+## Screen 7 — Courses (`/courses`)
+
+Every course on Personal Assistant's reading list in one place, so spare time goes on them.
+
+- **Which items.** Those whose `category` is `Course`, compared case-insensitively and trimmed
+  (`course` and ` Course ` count; `Courses` does not). They are usually ordinary websites, so
+  nothing is embedded or played.
+- **Each card.** The title; the duration, from `estimated_duration`, which Personal Assistant
+  keeps in **minutes** and is shown as "6 h 30 m"; progress as a bar; the notes, if any; and
+  **Open course**, which opens the URL in a new tab (`rel="noopener"`).
+- **Order.** Courses in progress first, then Personal Assistant's priority
+  (`important × urgent`), then the list's own order. Anything at 90% or more goes in a
+  **Finished** group, collapsed until you open it.
+- **The copy.** Kept in `reading_list_courses`, filled by the same fetch as the videos page,
+  so the two share the daily refresh, the refresh on opening a stale copy and the **Refresh**
+  button (`App\Livewire\ReadingListPage`). When Personal Assistant does not answer, the line
+  beside Refresh reads "Last updated 3 hours ago (couldn't reach Personal Assistant)" and the
+  courses stay as they were. With none, the page says "No courses in your reading list."
 
 ## Image routes
 
