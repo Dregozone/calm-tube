@@ -1,0 +1,22 @@
+{
+    "kind": "youtube#videoListResponse",
+    "etag": "calm-tube-discovered-details-etag",
+    "items": [
+        {
+            "kind": "youtube#video",
+            "id": "readvid0001",
+            "contentDetails": {
+                "duration": "PT18M42S"
+            },
+            "status": {
+                "uploadStatus": "processed",
+                "privacyStatus": "public",
+                "embeddable": true
+            }
+        }
+    ],
+    "pageInfo": {
+        "totalResults": 1,
+        "resultsPerPage": 1
+    }
+}

@@ -27,6 +27,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $avatar_path
  * @property string|null $uploads_playlist_id
  * @property bool $is_enabled
+ * @property bool $is_followed
  * @property float|null $playback_rate
  * @property int|null $outro_seconds
  * @property int|null $sample_limit
@@ -52,6 +53,7 @@ use Illuminate\Support\Facades\Storage;
     'avatar_path',
     'uploads_playlist_id',
     'is_enabled',
+    'is_followed',
     'playback_rate',
     'outro_seconds',
     'sample_limit',
@@ -124,6 +126,17 @@ class Channel extends Model
     public function scopeEnabled(Builder $query): void
     {
         $query->where('is_enabled', true);
+    }
+
+    /**
+     * Channels you chose, as opposed to ones archived only because a video on
+     * your reading list came from them.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeFollowed(Builder $query): void
+    {
+        $query->where('is_followed', true);
     }
 
     /**
@@ -226,6 +239,7 @@ class Channel extends Model
     {
         return [
             'is_enabled' => 'boolean',
+            'is_followed' => 'boolean',
             'playback_rate' => 'float',
             'outro_seconds' => 'integer',
             'sample_limit' => 'integer',

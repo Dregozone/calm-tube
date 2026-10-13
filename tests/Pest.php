@@ -24,7 +24,7 @@ pest()->extend(TestCase::class)
 
         config()->set('calm-tube.api_key', 'test-api-key');
     })
-    ->in('Feature');
+    ->in('Feature', 'Browser');
 
 /*
 |--------------------------------------------------------------------------
@@ -221,6 +221,100 @@ function requestsTo(string $fragment): int
     return collect(Http::recorded())
         ->filter(fn (array $pair): bool => str_contains($pair[0]->url(), $fragment))
         ->count();
+}
+
+/*
+|--------------------------------------------------------------------------
+| Personal Assistant
+|--------------------------------------------------------------------------
+|
+| The reading list API, faked the same way: only what a test expects to be
+| asked for. The identifier and token are part of the path, so a request to
+| the wrong one misses the fake and fails loudly.
+|
+*/
+
+const READING_LIST_URL = 'https://pa.test';
+
+/** A video on the reading list from a channel nobody follows. */
+const READING_VIDEO_ID = 'readvid0001';
+
+const READING_CHANNEL_ID = 'UCquietRoomsChannel00001';
+
+function configureReadingList(): void
+{
+    config()->set('services.reading_list', [
+        'url' => READING_LIST_URL,
+        'identifier' => 'calm-tube',
+        'token' => 'reading-list-token',
+    ]);
+}
+
+function readingListEndpoint(string $suffix = ''): string
+{
+    return READING_LIST_URL.'/api/readingList/calm-tube/reading-list-token'.$suffix;
+}
+
+/**
+ * One reading list item as Personal Assistant's API returns it.
+ *
+ * @param  array<string, mixed>  $overrides
+ * @return array<string, mixed>
+ */
+function readingListItem(int $id, string $url, array $overrides = []): array
+{
+    return [
+        'id' => $id,
+        'title' => "Reading list item {$id}",
+        'url' => $url,
+        'category' => 'Learning',
+        'notes' => null,
+        'important' => 3,
+        'urgent' => 2,
+        'estimated_duration' => 20,
+        'percent_complete' => 0,
+        ...$overrides,
+    ];
+}
+
+/**
+ * @param  list<array<string, mixed>>  $items
+ */
+function fakeReadingList(array $items): void
+{
+    Http::fake([
+        readingListEndpoint() => Http::response($items),
+    ]);
+}
+
+function fakeReadingListDown(): void
+{
+    Http::fake([
+        readingListEndpoint().'*' => Http::failedConnection(),
+    ]);
+}
+
+function fakeReadingListProgress(int $status = 200): void
+{
+    Http::fake([
+        readingListEndpoint('/*') => Http::response(['ok' => $status === 200], $status),
+    ]);
+}
+
+/**
+ * What archiving READING_VIDEO_ID costs: its snippet, then its details, then
+ * its unfollowed channel's avatar and thumbnail.
+ */
+function fakeReadingVideoArchive(): void
+{
+    Http::fake([
+        'www.googleapis.com/youtube/v3/videos*' => Http::sequence()
+            ->push(youtubeFixture('videos.list-discovered.json'))
+            ->push(youtubeFixture('videos.list-discovered-details.json')),
+    ]);
+
+    fakeChannelsList('channels.list-unfollowed.json');
+    fakeThumbnailDownloads();
 }
 
 /*

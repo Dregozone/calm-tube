@@ -45,6 +45,23 @@ new #[Title('Channels')] class extends Component
             ->where('youtube_channel_id', $channel->channelId)
             ->first();
 
+        // Archived only for a reading list video until now; following it is
+        // what turns it into one of yours.
+        if ($existing !== null && ! $existing->is_followed) {
+            $this->input = '';
+            $existing->forceFill(['is_followed' => true, 'is_enabled' => true])->save();
+
+            $result = RefreshChannel::dispatchSync($existing);
+
+            session()->flash('status', sprintf(
+                'Added %s. %s',
+                $existing->display_name,
+                $result instanceof RefreshResult ? $result->summary() : 'Nothing imported.'
+            ));
+
+            return;
+        }
+
         if ($existing !== null) {
             $this->addError('input', $existing->is_enabled
                 ? "You already follow {$existing->display_name}."
@@ -185,6 +202,7 @@ new #[Title('Channels')] class extends Component
     {
         return [
             'channels' => Channel::query()
+                ->followed()
                 ->withCount([
                     'videos',
                     'videos as set_aside_count' => fn ($query) => $query->setAside(),

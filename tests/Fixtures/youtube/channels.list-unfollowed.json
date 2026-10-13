@@ -1,0 +1,21 @@
+{
+    "kind": "youtube#channelListResponse",
+    "etag": "calm-tube-unfollowed-channel-etag",
+    "pageInfo": { "totalResults": 1, "resultsPerPage": 5 },
+    "items": [
+        {
+            "kind": "youtube#channel",
+            "id": "UCquietRoomsChannel00001",
+            "snippet": {
+                "title": "Quiet Rooms",
+                "customUrl": "@quietrooms",
+                "thumbnails": {
+                    "default": { "url": "https://yt3.ggpht.com/quiet-rooms=s88-c-k-c0x00ffffff-no-rj", "width": 88, "height": 88 }
+                }
+            },
+            "contentDetails": {
+                "relatedPlaylists": { "uploads": "UUquietRoomsChannel00001" }
+            }
+        }
+    ]
+}

@@ -1,0 +1,124 @@
+<?php
+
+namespace App\Services\ReadingList;
+
+use App\Exceptions\ReadingListException;
+use App\Models\ReadingListItem;
+use App\Support\ReadingListEntry;
+use Carbon\CarbonImmutable;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Date;
+use Illuminate\Support\Facades\DB;
+
+/**
+ * Keeps Calm Tube's copy of the reading list's YouTube videos, and writes
+ * finishing one back to Personal Assistant.
+ *
+ * The copy is what the videos page reads, so it works whether or not
+ * Personal Assistant answers. A failed refresh leaves it exactly as it was.
+ */
+class ReadingListSync
+{
+    private const string REFRESHED_AT_KEY = 'calm-tube.reading-list.refreshed_at';
+
+    public function __construct(
+        private readonly ReadingListClient $client,
+        private readonly VideoUrlParser $urls,
+        private readonly ReadingListArchiver $archiver,
+    ) {}
+
+    public function isConfigured(): bool
+    {
+        return $this->client->isConfigured();
+    }
+
+    /**
+     * Replaces the copy with the list as it is now, keeping only YouTube
+     * videos, then archives any video not seen before.
+     *
+     * @throws ReadingListException
+     */
+    public function refresh(): void
+    {
+        $rows = [];
+
+        foreach ($this->client->items() as $position => $entry) {
+            $videoId = $this->urls->videoId($entry->url);
+
+            if ($videoId !== null) {
+                $rows[] = $this->toRow($entry, $videoId, $position);
+            }
+        }
+
+        DB::transaction(function () use ($rows): void {
+            ReadingListItem::query()
+                ->whereNotIn('reading_list_id', array_column($rows, 'reading_list_id'))
+                ->delete();
+
+            foreach ($rows as $row) {
+                ReadingListItem::query()->updateOrCreate(
+                    ['reading_list_id' => $row['reading_list_id']],
+                    $row,
+                );
+            }
+        });
+
+        Cache::forever(self::REFRESHED_AT_KEY, now()->toIso8601String());
+
+        /** @var list<string> $pending */
+        $pending = ReadingListItem::query()->pending()->pluck('youtube_video_id')->unique()->values()->all();
+
+        $this->archiver->archive($pending);
+    }
+
+    public function lastRefreshedAt(): ?CarbonImmutable
+    {
+        $stored = Cache::get(self::REFRESHED_AT_KEY);
+
+        return is_string($stored) ? CarbonImmutable::instance(Date::parse($stored)) : null;
+    }
+
+    /**
+     * Never refreshed, or not for longer than the configured window.
+     */
+    public function isStale(): bool
+    {
+        $last = $this->lastRefreshedAt();
+
+        return ! $last instanceof CarbonImmutable
+            || $last->lt(now()->subHours((int) config('calm-tube.reading_list.refresh_after_hours')));
+    }
+
+    /**
+     * Moves the item to the done mark in Personal Assistant, which is as far
+     * as anything but Personal Assistant may take it, and so off the videos
+     * page. If Personal Assistant does not take it, nothing changes here
+     * either.
+     *
+     * @throws ReadingListException
+     */
+    public function markWatched(ReadingListItem $item): void
+    {
+        $percent = (int) config('calm-tube.reading_list.done_percent');
+
+        $this->client->setProgress($item->reading_list_id, $percent);
+
+        $item->forceFill(['percent_complete' => $percent])->save();
+    }
+
+    /**
+     * @return array{reading_list_id: int, youtube_video_id: string, title: string, url: string, category: string|null, percent_complete: int, position: int}
+     */
+    private function toRow(ReadingListEntry $entry, string $videoId, int $position): array
+    {
+        return [
+            'reading_list_id' => $entry->id,
+            'youtube_video_id' => $videoId,
+            'title' => $entry->title,
+            'url' => (string) $entry->url,
+            'category' => $entry->category,
+            'percent_complete' => max(0, min(100, $entry->percentComplete)),
+            'position' => $position,
+        ];
+    }
+}

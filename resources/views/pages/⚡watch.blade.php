@@ -1,16 +1,24 @@
 <?php
 
+use App\Exceptions\ReadingListException;
+use App\Models\ReadingListItem;
 use App\Models\Video;
+use App\Services\ReadingList\ReadingListSync;
 use App\Support\DescriptionRenderer;
 use Illuminate\Support\HtmlString;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 use Livewire\Attributes\Computed;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 new class extends Component
 {
     public Video $video;
+
+    /** Where the video was opened from: "videos", or empty for the feed. */
+    #[Url]
+    public string $from = '';
 
     /** The channel's playback speed as a form value; empty means normal. */
     public string $playbackRate = '';
@@ -174,6 +182,47 @@ new class extends Component
     }
 
     /**
+     * The reading list item this video is, while it is still to watch. Its
+     * end is a celebration rather than the countdown, wherever it was opened
+     * from.
+     */
+    #[Computed]
+    public function readingListItem(): ?ReadingListItem
+    {
+        return ReadingListItem::query()
+            ->pending()
+            ->where('youtube_video_id', $this->video->youtube_video_id)
+            ->orderBy('position')
+            ->first();
+    }
+
+    /**
+     * Writes the video's end back to Personal Assistant, which takes it off
+     * the videos page. Says whether Personal Assistant took it, for the modal
+     * to tell you; if it did not, the item stays exactly where it was.
+     */
+    public function markReadingListWatched(ReadingListSync $sync): bool
+    {
+        // The modal answering this is only on the page while the item is
+        // still to watch, so a re-render would take it away mid-sentence.
+        $this->skipRender();
+
+        $item = $this->readingListItem;
+
+        if ($item === null) {
+            return false;
+        }
+
+        try {
+            $sync->markWatched($item);
+        } catch (ReadingListException) {
+            return false;
+        }
+
+        return true;
+    }
+
+    /**
      * Deliberately a link and never an autoplay. One explicit next video is
      * the only thing this app ever suggests.
      */
@@ -229,6 +278,10 @@ new class extends Component
      */
     public function returnUrl(): string
     {
+        if ($this->returnsToVideos()) {
+            return route('videos.index');
+        }
+
         $filter = (string) session('calm-tube.feed.filter', 'all');
         $channel = (string) session('calm-tube.feed.channel', '');
 
@@ -236,6 +289,19 @@ new class extends Component
             'filter' => $filter === 'all' ? null : $filter,
             'channel' => $channel === '' ? null : $channel,
         ]));
+    }
+
+    public function returnLabel(): string
+    {
+        return $this->returnsToVideos() ? __('Back to videos') : __('Back to feed');
+    }
+
+    /**
+     * Opened from the videos page, rather than from the feed.
+     */
+    private function returnsToVideos(): bool
+    {
+        return $this->from === 'videos';
     }
 
     public function watchOnYouTubeUrl(): string
@@ -257,7 +323,7 @@ new class extends Component
          is also under the video, with its label, for smaller screens. --}}
     <div class="flex items-start justify-center gap-3">
         <div class="hidden shrink-0 sm:block">
-            <flux:tooltip :content="__('Back to feed')" position="right">
+            <flux:tooltip :content="$this->returnLabel()" position="right">
                 <flux:button
                     :href="$this->returnUrl()"
                     wire:navigate
@@ -265,7 +331,7 @@ new class extends Component
                     size="sm"
                     icon="arrow-left"
                     square
-                    :aria-label="__('Back to feed')"
+                    :aria-label="$this->returnLabel()"
                 />
             </flux:tooltip>
         </div>
@@ -298,6 +364,9 @@ new class extends Component
                     data-seek-seconds="{{ config('calm-tube.player.seek_seconds') }}"
                     data-resume-seconds="{{ $this->video->isResumable() ? $this->video->resume_seconds : 0 }}"
                     data-autoplay="{{ $this->shouldAutoplay() ? 1 : 0 }}"
+                    data-celebrate="{{ $this->readingListItem ? 1 : 0 }}"
+                    data-finish-percent="{{ $this->readingListItem ? config('calm-tube.reading_list.finished_at_percent') : 0 }}"
+                    data-iframe-api="{{ config('calm-tube.player.iframe_api_url') }}"
                 >
                     <iframe
                         id="calm-player"
@@ -356,7 +425,7 @@ new class extends Component
 
                         <div class="mt-2 flex flex-col items-center gap-2">
                             <flux:button id="calm-back" variant="primary" size="sm">
-                                {{ __('Back to feed') }}
+                                {{ $this->returnLabel() }}
                             </flux:button>
 
                             @if ($this->nextUnwatched)
@@ -424,7 +493,7 @@ new class extends Component
 
         <div class="mt-5 flex flex-wrap items-center gap-2">
             <flux:button :href="$this->returnUrl()" wire:navigate variant="subtle" size="sm" icon="arrow-left">
-                {{ __('Back to feed') }}
+                {{ $this->returnLabel() }}
             </flux:button>
 
             <flux:button wire:click="toggleWatched" size="sm" variant="subtle">
@@ -550,6 +619,62 @@ new class extends Component
             </div>
         </div>
     </div>
+
+    {{-- In place of the countdown when the video is on your reading list.
+         Nothing leaves the page by itself: writing it back to Personal
+         Assistant is your click, and so is where you go next. Ignored by
+         Livewire, like the countdown, so the re-render that marks the video
+         watched cannot close it. --}}
+    @if ($this->readingListItem)
+        <div
+            wire:ignore
+            id="calm-celebrate"
+            class="fixed inset-0 z-50 hidden items-center justify-center bg-zinc-950/60 p-4 backdrop-blur-sm"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="calm-celebrate-title"
+        >
+            <div class="w-full max-w-sm rounded-2xl border border-zinc-200 bg-white p-8 text-center shadow-2xl dark:border-zinc-700 dark:bg-zinc-900">
+                <p class="text-5xl" aria-hidden="true">🎉</p>
+
+                <flux:heading size="lg" id="calm-celebrate-title" class="mt-4">
+                    {{ __("Nice one, that's one off the list!") }}
+                </flux:heading>
+
+                <flux:text class="mt-3 font-medium text-zinc-800 dark:text-white">
+                    {{ $this->readingListItem->title }}
+                </flux:text>
+
+                <div id="calm-celebrate-ask" class="mt-6 flex flex-col gap-2">
+                    <flux:button id="calm-celebrate-done" variant="primary">
+                        {{ __('Mark as watched') }}
+                    </flux:button>
+
+                    <flux:button id="calm-celebrate-later" variant="subtle">
+                        {{ __('Not now') }}
+                    </flux:button>
+                </div>
+
+                <div id="calm-celebrate-saved" class="mt-6 hidden flex-col gap-2">
+                    <flux:text>{{ __("Marked as watched. It's off your videos page.") }}</flux:text>
+
+                    <flux:button :href="route('videos.index')" variant="primary" class="mt-2">
+                        {{ __('Back to videos') }}
+                    </flux:button>
+                </div>
+
+                <div id="calm-celebrate-failed" class="mt-6 hidden flex-col gap-2">
+                    <flux:text class="text-red-600 dark:text-red-400">
+                        {{ __("Personal Assistant didn't take it, so it's still on your list. Try again later.") }}
+                    </flux:text>
+
+                    <flux:button id="calm-celebrate-close" variant="subtle" class="mt-2">
+                        {{ __('Close') }}
+                    </flux:button>
+                </div>
+            </div>
+        </div>
+    @endif
 </section>
 
 @script
@@ -559,6 +684,7 @@ new class extends Component
     const ended = document.getElementById('calm-ended');
     const errored = document.getElementById('calm-error');
     const modal = document.getElementById('calm-countdown');
+    const celebration = document.getElementById('calm-celebrate');
 
     if (frame && stage) {
         const reveal = (panel) => panel?.classList.replace('hidden', 'flex');
@@ -579,6 +705,8 @@ new class extends Component
         const resumeAt = Number(stage.dataset.resumeSeconds || 0);
         const resumePanel = document.getElementById('calm-resume');
         const autoplay = stage.dataset.autoplay === '1';
+        const celebrate = stage.dataset.celebrate === '1' && celebration !== null;
+        const finishPercent = Number(stage.dataset.finishPercent || 0);
         let rate = Number(stage.dataset.playbackRate || 1);
         let player = null;
         let watching = null;
@@ -627,6 +755,40 @@ new class extends Component
             tick();
         };
 
+        // A reading list video ends here rather than in the countdown: it
+        // asks once per viewing, and leaving is up to you.
+        let celebrated = false;
+
+        const showCelebration = () => {
+            if (celebrated) {
+                return;
+            }
+
+            celebrated = true;
+            reveal(celebration);
+        };
+
+        const closeCelebration = () => conceal(celebration);
+
+        document.getElementById('calm-celebrate-later')?.addEventListener('click', closeCelebration);
+        document.getElementById('calm-celebrate-close')?.addEventListener('click', closeCelebration);
+        celebration?.addEventListener('click', (event) => {
+            if (event.target === celebration) {
+                closeCelebration();
+            }
+        });
+
+        const done = document.getElementById('calm-celebrate-done');
+
+        done?.addEventListener('click', async () => {
+            done.setAttribute('disabled', '');
+
+            const saved = await $wire.markReadingListWatched();
+
+            document.getElementById('calm-celebrate-ask')?.classList.replace('flex', 'hidden');
+            reveal(document.getElementById(saved ? 'calm-celebrate-saved' : 'calm-celebrate-failed'));
+        });
+
         // Every way out of the countdown other than letting it finish.
         document.getElementById('calm-stay')?.addEventListener('click', stopCountdown);
         document.getElementById('calm-go-now')?.addEventListener('click', leaveNow);
@@ -639,6 +801,10 @@ new class extends Component
         document.addEventListener('keydown', (event) => {
             if (event.key === 'Escape' && countdown !== null) {
                 stopCountdown();
+            }
+
+            if (event.key === 'Escape' && celebration?.classList.contains('flex')) {
+                closeCelebration();
             }
         }, { signal });
 
@@ -654,18 +820,27 @@ new class extends Component
             const watchForEndCards = () => {
                 clearInterval(watching);
 
-                if (maskFrom <= 0 && outro <= 0) {
+                if (maskFrom <= 0 && outro <= 0 && finishPercent <= 0) {
                     return;
                 }
 
                 watching = setInterval(() => {
-                    const left = player.getDuration() - player.getCurrentTime();
+                    const duration = player.getDuration();
+                    const left = duration - player.getCurrentTime();
 
                     if (maskFrom > 0) {
                         left > 0 && left <= maskFrom ? reveal(mask) : conceal(mask);
                     }
 
                     if (outro > 0 && ! finishedEarly && left > 0 && left <= outro) {
+                        finishedEarly = true;
+                        finish();
+                    }
+
+                    // The last few percent of a reading list video are
+                    // usually credits; it counts as finished before them.
+                    if (finishPercent > 0 && ! finishedEarly && duration > 0
+                        && player.getCurrentTime() / duration >= finishPercent / 100) {
                         finishedEarly = true;
                         finish();
                     }
@@ -712,7 +887,7 @@ new class extends Component
 
                 stopRecording(false);
                 $wire.markWatched();
-                startCountdown();
+                celebrate ? showCelebration() : startCountdown();
             };
 
             const applyRate = () => {
@@ -824,6 +999,7 @@ new class extends Component
                 stopCountdown();
                 conceal(ended);
                 finishedEarly = false;
+                celebrated = false;
                 $wire.clearProgress();
                 player.seekTo(0);
                 player.playVideo();
@@ -906,7 +1082,7 @@ new class extends Component
             if (! document.getElementById('youtube-iframe-api')) {
                 const tag = document.createElement('script');
                 tag.id = 'youtube-iframe-api';
-                tag.src = 'https://www.youtube.com/iframe_api';
+                tag.src = stage.dataset.iframeApi || 'https://www.youtube.com/iframe_api';
                 document.head.appendChild(tag);
             }
         }

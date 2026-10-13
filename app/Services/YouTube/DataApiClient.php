@@ -6,6 +6,7 @@ use App\Enums\LiveStatus;
 use App\Exceptions\ApiRequestException;
 use App\Exceptions\QuotaExceededException;
 use App\Support\ChannelData;
+use App\Support\DiscoveredVideo;
 use App\Support\FeedEntry;
 use App\Support\VideoData;
 use Carbon\CarbonImmutable;
@@ -86,6 +87,59 @@ class DataApiClient
                 }
 
                 $videos->put($videoId, $this->toVideoData($videoId, $item));
+            }
+        }
+
+        return $videos;
+    }
+
+    /**
+     * What is needed to archive videos seen for the first time away from any
+     * channel's uploads, keyed by video id: a reading list video, say.
+     *
+     * snippet is requested because these rows do not exist yet. Like a
+     * backfill, this is a video's first and only source of its archived
+     * title, description and thumbnail; it must never be used to update one.
+     *
+     * @param  list<string>  $ids
+     * @return Collection<string, DiscoveredVideo>
+     */
+    public function discoveredVideos(array $ids): Collection
+    {
+        /** @var Collection<string, DiscoveredVideo> $videos */
+        $videos = collect();
+
+        if ($ids === [] || ! $this->isConfigured()) {
+            return $videos;
+        }
+
+        foreach (array_chunk($ids, self::BATCH_SIZE) as $batch) {
+            $payload = $this->get('videos', [
+                'part' => 'snippet',
+                'id' => implode(',', $batch),
+            ]);
+
+            foreach ($this->items($payload) as $item) {
+                $videoId = $this->text(data_get($item, 'id'));
+                $title = $this->text(data_get($item, 'snippet.title'));
+                $published = $this->text(data_get($item, 'snippet.publishedAt'));
+                $channelId = $this->text(data_get($item, 'snippet.channelId'));
+
+                if ($videoId === null || $title === null || $published === null || $channelId === null) {
+                    continue;
+                }
+
+                $videos->put($videoId, new DiscoveredVideo(
+                    entry: new FeedEntry(
+                        videoId: $videoId,
+                        title: $title,
+                        description: $this->text(data_get($item, 'snippet.description')),
+                        publishedAt: CarbonImmutable::parse($published),
+                        thumbnailUrl: $this->largestThumbnail(data_get($item, 'snippet.thumbnails')),
+                    ),
+                    channelId: $channelId,
+                    channelTitle: $this->text(data_get($item, 'snippet.channelTitle')) ?? $channelId,
+                ));
             }
         }
 

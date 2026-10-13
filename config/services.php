@@ -28,6 +28,15 @@ return [
         'region' => env('AWS_DEFAULT_REGION', 'us-east-1'),
     ],
 
+    // Personal Assistant, whose reading list the videos page shows. Its
+    // existing API, used as it is: the identifier and token are the pair it
+    // checks on every request.
+    'reading_list' => [
+        'url' => env('READING_LIST_URL'),
+        'identifier' => env('READING_LIST_IDENTIFIER'),
+        'token' => env('READING_LIST_TOKEN'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),

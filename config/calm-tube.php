@@ -135,6 +135,10 @@ return [
 
         // How far the left and right arrow keys jump on the watch page.
         'seek_seconds' => 10,
+
+        // Where the player API script is loaded from. Only ever changed by
+        // the browser tests, which stand in a player they can end on cue.
+        'iframe_api_url' => 'https://www.youtube.com/iframe_api',
     ],
 
     /*
@@ -206,6 +210,34 @@ return [
         // Snoozing a channel keeps what is already here and lets nothing it
         // publishes over this many days into the feed, ever.
         'snooze_days' => 7,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Reading List
+    |--------------------------------------------------------------------------
+    |
+    | The videos page shows the YouTube videos on Personal Assistant's reading
+    | list (services.reading_list holds where it is). Its answer is kept here,
+    | so the page still works when Personal Assistant does not.
+    |
+    | Personal Assistant alone completes an item. Finishing one here moves it
+    | to done_percent, which is plainly finished when you scroll the list there
+    | and is also the point past which the videos page stops showing it.
+    |
+    */
+
+    'reading_list' => [
+        // Refreshed by the scheduler once a day, and by opening the videos
+        // page when the copy is older than this.
+        'refresh_after_hours' => 24,
+
+        'done_percent' => 90,
+
+        // A reading list video counts as finished this far in, as well as at
+        // the end or its channel's outro, because the last few percent are
+        // usually credits.
+        'finished_at_percent' => 95,
     ],
 
     /*

@@ -111,6 +111,23 @@ describe('add form errors', function (): void {
             ->assertSee('already added but disabled');
     });
 
+    it('follows a channel first archived for a reading list video', function (): void {
+        Storage::fake('images');
+        fakeChannelsList();
+        fakeSuccessfulRefresh('feed-single-entry.xml', 'videos.list-single.json');
+        calmChannel(['is_enabled' => false, 'is_followed' => false]);
+
+        Livewire::test('pages::channels.index')
+            ->set('input', '@practicalengineering')
+            ->call('addChannel')
+            ->assertHasNoErrors()
+            ->assertSee(CALM_CHANNEL_TITLE);
+
+        expect(Channel::sole())
+            ->is_followed->toBeTrue()
+            ->is_enabled->toBeTrue();
+    });
+
     it('says when no such channel exists', function (): void {
         fakeChannelsList('empty-items.json');
 
@@ -223,6 +240,12 @@ describe('listing channels', function (): void {
         Channel::factory()->failing()->create();
 
         Livewire::test('pages::channels.index')->assertSee('failed');
+    });
+
+    it('leaves out channels archived only for a reading list video', function (): void {
+        Channel::factory()->unfollowed()->create(['title' => 'Quiet Rooms']);
+
+        Livewire::test('pages::channels.index')->assertDontSee('Quiet Rooms');
     });
 
     it('marks a disabled channel as hidden from the feed', function (): void {

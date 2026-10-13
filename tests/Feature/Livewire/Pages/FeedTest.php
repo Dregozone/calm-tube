@@ -501,3 +501,19 @@ describe('videos that arrive while you are reading', function (): void {
             ->assertDontSee('arrived while you were away');
     });
 });
+
+it('keeps reading list videos from unfollowed channels out of the feed', function (): void {
+    calmChannel();
+    Video::factory()
+        ->for(Channel::factory()->unfollowed()->create())
+        ->create(['title' => 'From the reading list']);
+
+    Livewire::test('pages::feed', ['filter' => 'all'])
+        ->assertDontSee('From the reading list');
+});
+
+it('asks you to follow a channel when the only ones archived are unfollowed', function (): void {
+    Channel::factory()->unfollowed()->create();
+
+    Livewire::test('pages::feed')->assertSee('Follow a channel to start building your feed.');
+});

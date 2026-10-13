@@ -28,6 +28,7 @@ class ChannelFactory extends Factory
             'avatar_path' => null,
             'uploads_playlist_id' => 'UU'.Str::random(22),
             'is_enabled' => true,
+            'is_followed' => true,
             'playback_rate' => null,
             'outro_seconds' => null,
             'sample_limit' => null,
@@ -46,6 +47,15 @@ class ChannelFactory extends Factory
     public function disabled(): static
     {
         return $this->state(fn (): array => ['is_enabled' => false]);
+    }
+
+    /**
+     * Archived only because a reading list video came from it: never
+     * refreshed and never in the feed.
+     */
+    public function unfollowed(): static
+    {
+        return $this->state(fn (): array => ['is_enabled' => false, 'is_followed' => false]);
     }
 
     /**
