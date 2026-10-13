@@ -39,6 +39,7 @@ use Illuminate\Support\Facades\Storage;
  * @property CarbonImmutable|null $sampled_out_at
  * @property string|null $pick_reason
  * @property CarbonImmutable|null $snoozed_at
+ * @property CarbonImmutable|null $on_reading_list_at
  * @property CarbonImmutable|null $unavailable_at
  * @property CarbonImmutable|null $enriched_at
  * @property CarbonImmutable|null $created_at
@@ -68,6 +69,7 @@ use Illuminate\Support\Facades\Storage;
     'sampled_out_at',
     'pick_reason',
     'snoozed_at',
+    'on_reading_list_at',
     'unavailable_at',
     'enriched_at',
 ])]
@@ -158,6 +160,7 @@ class Video extends Model
             // must still show everything it holds.
             ->whereNull('sampled_out_at')
             ->unsnoozed()
+            ->offReadingList()
             ->whereHas('channel', fn (Builder $channelQuery): Builder => $channelQuery
                 ->where('is_enabled', true));
     }
@@ -199,6 +202,18 @@ class Video extends Model
     public function isSnoozed(): bool
     {
         return $this->snoozed_at !== null;
+    }
+
+    /**
+     * Never been on the reading list. One that has belongs to the videos page
+     * alone, even after you finish it, so it never reaches the feed and is
+     * never counted by a sample limit.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeOffReadingList(Builder $query): void
+    {
+        $query->whereNull('on_reading_list_at');
     }
 
     /**
@@ -365,6 +380,7 @@ class Video extends Model
             'hidden_at' => 'datetime',
             'sampled_out_at' => 'datetime',
             'snoozed_at' => 'datetime',
+            'on_reading_list_at' => 'datetime',
             'unavailable_at' => 'datetime',
             'enriched_at' => 'datetime',
             'duration_seconds' => 'integer',

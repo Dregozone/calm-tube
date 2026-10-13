@@ -132,7 +132,7 @@ class ChannelSampler
      */
     private function applyToDay(Channel $channel, string $day): int
     {
-        $ofTheDay = fn () => $channel->videos()->viewable()->unsnoozed()->whereDate('published_at', $day);
+        $ofTheDay = fn () => $channel->videos()->viewable()->unsnoozed()->offReadingList()->whereDate('published_at', $day);
 
         // Yours, not the rule's — and brought back if the rule had it.
         $this->mark($ofTheDay()->touched()->get(), null);
@@ -188,6 +188,7 @@ class ChannelSampler
         $days = $channel->videos()
             ->viewable()
             ->unsnoozed()
+            ->offReadingList()
             ->selectRaw('date(published_at) as day')
             ->distinct()
             ->pluck('day')

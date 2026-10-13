@@ -4,6 +4,7 @@ namespace App\Services\ReadingList;
 
 use App\Exceptions\ReadingListException;
 use App\Models\ReadingListItem;
+use App\Models\Video;
 use App\Support\ReadingListEntry;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Cache;
@@ -69,6 +70,13 @@ class ReadingListSync
         $pending = ReadingListItem::query()->pending()->pluck('youtube_video_id')->unique()->values()->all();
 
         $this->archiver->archive($pending);
+
+        // Every video on the list, done or not, and whether the reading list
+        // or the feed found it first: from now on it is the videos page's.
+        Video::query()
+            ->whereIn('youtube_video_id', ReadingListItem::query()->select('youtube_video_id'))
+            ->whereNull('on_reading_list_at')
+            ->update(['on_reading_list_at' => now()]);
     }
 
     public function lastRefreshedAt(): ?CarbonImmutable

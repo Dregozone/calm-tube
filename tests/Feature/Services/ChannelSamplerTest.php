@@ -235,3 +235,16 @@ describe('a longer video arriving later the same day', function (): void {
         expect($aside->fresh()->isSetAside())->toBeFalse();
     });
 });
+
+it('never counts a reading list video against the limit', function (): void {
+    $channel = Channel::factory()->sampled(1)->create();
+    uploadsOn($channel, '2026-09-22', [10]);
+    Video::factory()->for($channel)->onReadingList()->create([
+        'duration_seconds' => 3600,
+        'published_at' => '2026-09-22 09:00:00',
+    ]);
+
+    sampler()->apply($channel);
+
+    expect(Video::inFeed()->pluck('duration_seconds')->all())->toBe([10 * 60]);
+});

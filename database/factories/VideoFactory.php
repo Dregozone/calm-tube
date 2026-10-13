@@ -128,6 +128,14 @@ class VideoFactory extends Factory
         return $this->state(fn (): array => ['sampled_out_at' => now()]);
     }
 
+    /**
+     * Has been on the reading list, so it lives on the videos page alone.
+     */
+    public function onReadingList(): static
+    {
+        return $this->state(fn (): array => ['on_reading_list_at' => now()]);
+    }
+
     public function archived(): static
     {
         return $this->state(fn (array $attributes): array => [

@@ -199,6 +199,17 @@ describe('videos from channels you do not follow', function (): void {
             ->and($followed->fresh()?->is_followed)->toBeTrue();
     });
 
+    it('keeps a video from a channel you follow out of the feed', function (): void {
+        Channel::factory()->create(['youtube_channel_id' => READING_CHANNEL_ID]);
+        fakeReadingList([readingListItem(1, 'https://www.youtube.com/watch?v='.READING_VIDEO_ID)]);
+        fakeReadingVideoArchive();
+
+        sync()->refresh();
+
+        expect(Video::query()->sole()->on_reading_list_at)->not->toBeNull()
+            ->and(Video::query()->inFeed()->exists())->toBeFalse();
+    });
+
     it('waits for an API key before archiving', function (): void {
         config()->set('calm-tube.api_key');
         fakeReadingList([readingListItem(1, 'https://www.youtube.com/watch?v='.READING_VIDEO_ID)]);
@@ -207,6 +218,35 @@ describe('videos from channels you do not follow', function (): void {
 
         expect(ReadingListItem::query()->count())->toBeOne()
             ->and(Video::query()->count())->toBe(0);
+    });
+});
+
+describe('a video the feed already had', function (): void {
+    it('leaves the feed once it is on the reading list', function (): void {
+        archivedReadingVideo();
+        fakeReadingList([readingListItem(1, 'https://www.youtube.com/watch?v='.CALM_VIDEO_ID)]);
+
+        sync()->refresh();
+
+        expect(Video::query()->inFeed()->exists())->toBeFalse();
+    });
+
+    it('leaves the feed even when it is already finished', function (): void {
+        archivedReadingVideo();
+        fakeReadingList([readingListItem(1, 'https://www.youtube.com/watch?v='.CALM_VIDEO_ID, ['percent_complete' => 90])]);
+
+        sync()->refresh();
+
+        expect(Video::query()->inFeed()->exists())->toBeFalse();
+    });
+
+    it('stays out of the feed once it is off the reading list', function (): void {
+        Video::factory()->for(calmChannel())->onReadingList()->create(['youtube_video_id' => CALM_VIDEO_ID]);
+        fakeReadingList([]);
+
+        sync()->refresh();
+
+        expect(Video::query()->inFeed()->exists())->toBeFalse();
     });
 });
 

@@ -517,3 +517,10 @@ it('asks you to follow a channel when the only ones archived are unfollowed', fu
 
     Livewire::test('pages::feed')->assertSee('Follow a channel to start building your feed.');
 });
+
+it('keeps reading list videos from followed channels out of the feed', function (): void {
+    Video::factory()->for(calmChannel())->onReadingList()->create(['title' => 'From the reading list']);
+
+    Livewire::test('pages::feed', ['filter' => 'all'])
+        ->assertDontSee('From the reading list');
+});

@@ -54,6 +54,7 @@ directly.
 | `duration_seconds` | integer | yes | null | Null = unknown (no API key, quota, or live) |
 | `resume_seconds` | integer | yes | null | How far in you got; null means not started, or finished |
 | `sampled_out_at` | timestamp | yes | null | Held back by the channel's sample limit; still archived |
+| `on_reading_list_at` | timestamp | yes | null | Set once the video has been on the reading list, and never cleared: it is the videos page's from then on, never in the feed and never counted by a sample limit |
 | `thumbnail_url` | string | yes | null | Source URL; fallback when no local file |
 | `thumbnail_path` | string | yes | null | Archived file, relative to the configured disk |
 | `is_short` | boolean | yes | null | Null = not yet determined. Once set, never re-checked |
