@@ -44,8 +44,8 @@ class PushToProductionCommand extends Command
             return self::FAILURE;
         }
 
-        $token = (string) ($this->option('token') ?: password('Import token', required: true));
-        $client = $this->client((string) $this->argument('url'), $token);
+        $token = $this->input()->string('token')->value() ?: password('Import token', required: true);
+        $client = $this->client($this->input()->string('url')->value(), $token);
 
         try {
             $this->send($client, 'import/start', [], expecting: 'message');
