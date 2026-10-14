@@ -31,7 +31,7 @@ class MakeLoginCommand extends Command
 
     public function handle(): int
     {
-        $email = Str::lower(trim((string) $this->argument('email')));
+        $email = $this->input()->string('email')->trim()->lower()->value();
         $user = User::query()->firstOrNew(['email' => $email]);
 
         [$password, $confirmation] = $this->password();
@@ -78,10 +78,10 @@ class MakeLoginCommand extends Command
      */
     private function password(): array
     {
-        $password = $this->argument('password');
+        if ($this->argument('password') !== null) {
+            $password = $this->input()->string('password')->value();
 
-        if ($password !== null) {
-            return [(string) $password, (string) $password];
+            return [$password, $password];
         }
 
         return [

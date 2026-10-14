@@ -65,7 +65,7 @@ class SampleChannelsCommand extends Command
         return Channel::query()
             ->whereNotNull('sample_limit')
             ->when(
-                $this->option('channel'),
+                $this->input()->string('channel')->value(),
                 fn ($query, string $id) => $query->where('youtube_channel_id', $id)
             )
             ->orderBy('title')

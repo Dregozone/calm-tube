@@ -26,7 +26,7 @@ class MoveImagesToDatabaseCommand extends Command
 
     public function handle(): int
     {
-        $from = Storage::disk((string) $this->option('from'));
+        $from = Storage::disk($this->input()->string('from')->value());
         $to = Storage::disk((string) config('calm-tube.images.disk'));
 
         $moved = 0;
