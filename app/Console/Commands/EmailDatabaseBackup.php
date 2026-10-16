@@ -12,8 +12,11 @@ use Illuminate\Support\Number;
  * Dumps and zips the database with spatie/laravel-backup, then emails the zip.
  *
  * The same command as Evoluna and Whenish, so Forge schedules it the same way:
- * a daily job running `php artisan backup:email-db`. A zip too big for Resend
- * is not attached; the email says so, so a backup never fails silently.
+ * a daily job running `php artisan backup:email-db`. Archived images and
+ * throwaway tables are left out (`backup.mail.excluded_tables`): the images
+ * can be downloaded again, and leaving them out keeps the zip small enough to
+ * attach. A zip still too big for Resend is not attached; the email says so,
+ * so a backup never fails silently.
  */
 class EmailDatabaseBackup extends Command
 {
@@ -30,6 +33,8 @@ class EmailDatabaseBackup extends Command
 
             return self::FAILURE;
         }
+
+        $this->excludeTablesFromDump();
 
         if ($this->call('backup:run', ['--only-db' => true]) !== self::SUCCESS) {
             $this->error('Database backup command failed.');
@@ -72,6 +77,19 @@ class EmailDatabaseBackup extends Command
         $this->info("Database backup emailed to {$recipient} with attachment {$filename}.");
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Hands the excluded tables to spatie's dumper, which reads them from each
+     * backed-up connection's `dump` config, for MySQL and SQLite alike.
+     */
+    private function excludeTablesFromDump(): void
+    {
+        $tables = (array) config('backup.mail.excluded_tables', []);
+
+        foreach ((array) config('backup.backup.source.databases', []) as $connection) {
+            config()->set("database.connections.{$connection}.dump.exclude_tables", $tables);
+        }
     }
 
     /**

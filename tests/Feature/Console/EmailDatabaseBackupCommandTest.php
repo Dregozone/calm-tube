@@ -59,6 +59,24 @@ it('dumps the database into a zip', function (): void {
     expect($dump)->toContain('Practical Engineering');
 });
 
+it('leaves archived images and throwaway tables out of the dump', function (): void {
+    DB::connection('backup_source')->statement('create table archived_images (id integer primary key, contents text)');
+    DB::connection('backup_source')->table('archived_images')->insert(['contents' => 'base64-thumbnail-bytes']);
+    DB::connection('backup_source')->statement('create table sessions (id text primary key, payload text)');
+    DB::connection('backup_source')->table('sessions')->insert(['id' => 'abc', 'payload' => 'session-payload']);
+
+    $this->artisan('backup:email-db')->assertSuccessful();
+
+    $zip = new ZipArchive;
+    $zip->open(Storage::disk('local')->path(latestBackupZip()));
+    $dump = $zip->getFromIndex(0);
+    $zip->close();
+
+    expect($dump)->toContain('Practical Engineering')
+        ->not->toContain('base64-thumbnail-bytes')
+        ->not->toContain('session-payload');
+});
+
 it('emails the zip as an attachment', function (): void {
     $this->artisan('backup:email-db')
         ->expectsOutputToContain('Database backup emailed to backups@example.com with attachment')
