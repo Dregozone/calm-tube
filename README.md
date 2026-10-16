@@ -5,7 +5,7 @@ youtube.com's homepage, recommendations or sidebar.
 
 One reverse-chronological list of what the channels you chose have published. No algorithm,
 no autoplay, no "up next", no Shorts. Single user: developed locally under Herd, and deployed
-on Laravel Forge.
+on Laravel Forge at [calm-tube.on-forge.com](https://calm-tube.on-forge.com).
 
 Three rules the app is built around, and none of them bend:
 
@@ -111,6 +111,7 @@ unaffected, and the Videos page says what is missing.
 | `php artisan calm:sample` | Re-apply channel sample limits across their whole history |
 | `php artisan calm:prune-runs` | Trim refresh history older than 30 days |
 | `php artisan calm:reading-list` | Fetch the YouTube videos and courses on Personal Assistant's reading list |
+| `php artisan backup:email-db` | Dump and zip the database, and email the zip (see [Backups](#backups)) |
 
 `calm:prune-runs` is the only thing in the app that deletes on a schedule, and it only touches
 operational history. Videos and channels are kept forever.
@@ -230,6 +231,40 @@ the real length.
 
 Long videos remember where you stopped. Reopening one offers "Resume from 18:42" rather than
 seeking there on its own, and the card shows a thin bar across the thumbnail.
+
+---
+
+## Backups
+
+Calm Tube is deployed on Forge, and its database (the archive, watched history and mixes) is
+backed up the same way as the other apps: a Forge **scheduled job**, daily, running
+
+```bash
+php artisan backup:email-db
+```
+
+It dumps the database with [spatie/laravel-backup](https://spatie.be/docs/laravel-backup),
+zips it, and emails the zip through Resend. It is not in the app's own scheduler, so it is set
+up in Forge exactly like the other projects. On Forge, set:
+
+```
+MAIL_MAILER=resend
+RESEND_API_KEY=
+MAIL_FROM_ADDRESS=
+BACKUP_RECIPIENT_EMAIL=
+```
+
+`BACKUP_ARCHIVE_PASSWORD` encrypts the zip, if set.
+
+- **No recipient** — the command fails straight away with *"No backup recipient is configured"*,
+  before dumping anything.
+- **Too big for Resend** — Resend refuses an email over 40 MB, counting the attachment after
+  base64 encoding. A bigger backup is not attached: the email still goes, says it was too big
+  and where the zip is on the server, and its subject ends *"(too big to attach)"*. The
+  limit is `BACKUP_ATTACHMENT_LIMIT_BYTES`.
+
+The zip stays in `storage/app/<APP_NAME>/` until the next deploy. Tests run the real backup
+against a throwaway SQLite file, so they need the `sqlite3` binary.
 
 ---
 
