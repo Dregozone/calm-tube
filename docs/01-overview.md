@@ -2,11 +2,12 @@
 
 ## What this is
 
-**Calm Tube** is a personal, local-only Laravel app for following a hand-picked set of YouTube
+**Calm Tube** is a personal Laravel app for following a hand-picked set of YouTube
 channels without ever loading youtube.com's homepage, recommendation rail or sidebar.
 
-It runs on one machine (Herd, `http://calm-tube.test`), for one person. It is not a product,
-has no multi-user story, and will never be deployed.
+It is developed under Herd (`http://calm-tube.test`) and deployed on Laravel Forge
+(`https://calm-tube.on-forge.com`), for one person. It is not a product and has no multi-user
+story.
 
 ## Goals
 
@@ -30,7 +31,7 @@ has no multi-user story, and will never be deployed.
   [05-youtube-integration.md](05-youtube-integration.md#shorts-detection).
 - **No search across YouTube.** The app cannot discover a channel you haven't already chosen.
 - **No notifications, no badges, no unread counts on the tab title.**
-- **No multi-user, no sharing, no sync, no deployment.**
+- **No multi-user, no sharing, no sync.**
 - **No AI that chooses what you see from outside what you follow.** The one AI feature, the
   weekly pick, only thins out a channel you opted into; other ideas are parked in
   [07-open-questions.md](07-open-questions.md).
