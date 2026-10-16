@@ -97,3 +97,25 @@ it('counts an avatar it could not download, rather than passing over it', functi
         ->expectsOutputToContain('1 could not be downloaded')
         ->assertSuccessful();
 });
+
+it('re-downloads a thumbnail whose stored copy is missing when repairing, as after a restore', function (): void {
+    fakeThumbnailDownloads();
+    $video = Video::factory()->for(calmChannel(['avatar_url' => null]))->archived()->create();
+
+    $this->artisan('calm:archive --repair')
+        ->expectsOutputToContain('1 image missing from the archive.')
+        ->expectsOutputToContain('Archived 1 image')
+        ->assertSuccessful();
+
+    Storage::disk('images')->assertExists($video->fresh()->thumbnail_path);
+});
+
+it('keeps a stored thumbnail when repairing', function (): void {
+    $video = Video::factory()->for(calmChannel(['avatar_url' => null]))->archived()->create();
+    Storage::disk('images')->put($video->thumbnail_path, 'stored-bytes');
+
+    $this->artisan('calm:archive --repair')->assertSuccessful();
+
+    Http::assertNothingSent();
+    expect(Storage::disk('images')->get($video->thumbnail_path))->toBe('stored-bytes');
+});

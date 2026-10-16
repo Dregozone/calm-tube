@@ -107,7 +107,7 @@ unaffected, and the Videos page says what is missing.
 | `php artisan calm:refresh` | Fetch new uploads from every enabled channel |
 | `php artisan calm:backfill` | Recover older uploads the RSS window can no longer reach |
 | `php artisan calm:enrich` | Fill in durations and live status for videos still missing them |
-| `php artisan calm:archive` | Download thumbnails and avatars not yet stored locally |
+| `php artisan calm:archive` | Download thumbnails and avatars not yet stored locally (`--repair` also re-downloads any whose stored copy is missing) |
 | `php artisan calm:sample` | Re-apply channel sample limits across their whole history |
 | `php artisan calm:prune-runs` | Trim refresh history older than 30 days |
 | `php artisan calm:reading-list` | Fetch the YouTube videos and courses on Personal Assistant's reading list |
@@ -262,6 +262,23 @@ BACKUP_RECIPIENT_EMAIL=
   base64 encoding. A bigger backup is not attached: the email still goes, says it was too big
   and where the zip is on the server, and its subject ends *"(too big to attach)"*. The
   limit is `BACKUP_ATTACHMENT_LIMIT_BYTES`.
+
+**What's in it.** Channels, videos (watched, skipped, hidden, resume points), mixes, digests,
+the reading list and your login. Left out, in `backup.mail.excluded_tables`: `archived_images`,
+which is nearly all of the database, plus sessions, cache, jobs and `refresh_runs`. That takes
+the zip from about 40 MB to well under 1 MB.
+
+**Restoring.** On a fresh database:
+
+```bash
+php artisan migrate                # creates every table, including the left-out ones
+mysql <database> < <dump>.sql      # the dump drops and recreates each table it holds
+php artisan calm:archive --repair  # downloads the thumbnails and avatars again
+```
+
+Until the repair runs, each card shows YouTube's current thumbnail. The images downloaded again
+are what YouTube serves today, so a thumbnail an uploader has changed since won't match the
+original.
 
 The zip stays in `storage/app/<APP_NAME>/` until the next deploy. Tests run the real backup
 against a throwaway SQLite file, so they need the `sqlite3` binary.

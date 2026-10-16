@@ -8,6 +8,7 @@ use App\Models\Video;
 use App\Services\YouTube\ImageArchiver;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 
 /**
@@ -19,10 +20,16 @@ use Illuminate\Support\Str;
  *
  * Shorts are skipped: they never reach the feed, so their images are never
  * shown, and on a Shorts heavy channel that is most of the downloads.
+ *
+ * --repair first forgets every path whose image is no longer stored, as after
+ * restoring a backup made without archived_images, so those are downloaded
+ * again too. Until then each card falls back to the original URL.
  */
 class ArchiveImagesCommand extends Command
 {
-    protected $signature = 'calm:archive {--limit=0 : Stop after this many images}';
+    protected $signature = 'calm:archive
+        {--limit=0 : Stop after this many images}
+        {--repair : Also re-download images whose stored copy is missing}';
 
     protected $description = 'Archive thumbnails and avatars that are not stored yet';
 
@@ -31,6 +38,10 @@ class ArchiveImagesCommand extends Command
         $limit = max((int) $this->option('limit'), 0);
         $archived = 0;
         $failed = 0;
+
+        if ($this->option('repair')) {
+            $this->forgetMissingImages();
+        }
 
         foreach ($this->channels() as $channel) {
             $path = $archiver->archiveAvatar($channel);
@@ -76,6 +87,32 @@ class ArchiveImagesCommand extends Command
         ));
 
         return self::SUCCESS;
+    }
+
+    /**
+     * Clears each avatar and thumbnail path that points at nothing, so the
+     * usual queries below pick them up again.
+     */
+    private function forgetMissingImages(): void
+    {
+        $disk = Storage::disk((string) config('calm-tube.images.disk'));
+        $forgotten = 0;
+
+        foreach (Channel::query()->whereNotNull('avatar_path')->get() as $channel) {
+            if (! $disk->exists($channel->avatar_path)) {
+                $channel->forceFill(['avatar_path' => null])->save();
+                $forgotten++;
+            }
+        }
+
+        foreach (Video::query()->whereNotNull('thumbnail_path')->lazyById() as $video) {
+            if (! $disk->exists($video->thumbnail_path)) {
+                $video->forceFill(['thumbnail_path' => null])->save();
+                $forgotten++;
+            }
+        }
+
+        $this->line("{$forgotten} ".Str::plural('image', $forgotten).' missing from the archive.');
     }
 
     /**

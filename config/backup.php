@@ -288,6 +288,23 @@ return [
          * the email says so instead.
          */
         'attachment_limit_bytes' => (int) env('BACKUP_ATTACHMENT_LIMIT_BYTES', 40_000_000),
+
+        /*
+         * Tables `backup:email-db` leaves out of the dump, so the zip stays small
+         * enough to attach. archived_images is nearly all of the database; the
+         * rest is throwaway. A restore runs `migrate` first, so these tables still
+         * exist, just empty, and `calm:archive --repair` downloads the images again.
+         */
+        'excluded_tables' => [
+            'archived_images',
+            'sessions',
+            'cache',
+            'cache_locks',
+            'jobs',
+            'job_batches',
+            'failed_jobs',
+            'refresh_runs',
+        ],
     ],
 
     /*
