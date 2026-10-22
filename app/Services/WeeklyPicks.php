@@ -11,7 +11,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
 
 /**
@@ -199,7 +198,7 @@ class WeeklyPicks
                 timeout: (int) config('calm-tube.ai.timeout'),
             );
 
-            $answer = $response instanceof StructuredAgentResponse ? $response['picks'] ?? [] : [];
+            $answer = $response['picks'] ?? [];
         } catch (Throwable $exception) {
             Log::channel('calm')->warning('Weekly pick could not ask the model', [
                 'channel_id' => $channel->youtube_channel_id,
