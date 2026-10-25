@@ -524,3 +524,58 @@ it('keeps reading list videos from followed channels out of the feed', function 
     Livewire::test('pages::feed', ['filter' => 'all'])
         ->assertDontSee('From the reading list');
 });
+
+describe('remaining watch time', function (): void {
+    it('adds up what is left to watch in the heading', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->create(['duration_seconds' => 3600]);
+        Video::factory()->for($channel)->create(['duration_seconds' => 1500]);
+
+        Livewire::test('pages::feed')
+            ->assertViewHas('remaining', '1:25')
+            ->assertSeeHtml('(1:25<span class="hidden sm:inline"> remaining</span>)');
+    });
+
+    it('counts each video as its card does', function (): void {
+        $fast = calmChannel(['playback_rate' => 2.0, 'outro_seconds' => 60]);
+        Video::factory()->for($fast)->create(['duration_seconds' => 1260]);
+        Video::factory()->for(Channel::factory())->create(['duration_seconds' => 1200, 'resume_seconds' => 600]);
+
+        // 10 minutes at double speed without the outro, and the 10 left of the other.
+        Livewire::test('pages::feed')->assertViewHas('remaining', '0:20');
+    });
+
+    it('counts nothing for a watched video on the all tab', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->create(['duration_seconds' => 600]);
+        Video::factory()->for($channel)->watched()->create(['duration_seconds' => 6000]);
+
+        Livewire::test('pages::feed')
+            ->set('filter', 'all')
+            ->assertViewHas('remaining', '0:10');
+    });
+
+    it('counts every page, not only the one in front of you', function (): void {
+        config()->set('calm-tube.feed.per_page', 2);
+        Video::factory()->for(calmChannel())->count(3)->create(['duration_seconds' => 600]);
+
+        Livewire::test('pages::feed')->assertViewHas('remaining', '0:30');
+    });
+
+    it('follows the channel filter', function (): void {
+        $wanted = Video::factory()->for(calmChannel())->create(['duration_seconds' => 600]);
+        Video::factory()->for(Channel::factory())->create(['duration_seconds' => 6000]);
+
+        Livewire::test('pages::feed')
+            ->set('channel', $wanted->channel->youtube_channel_id)
+            ->assertViewHas('remaining', '0:10');
+    });
+
+    it('leaves the heading alone when there is nothing left', function (): void {
+        Video::factory()->for(calmChannel())->watched()->create(['duration_seconds' => 600]);
+
+        Livewire::test('pages::feed')
+            ->assertViewHas('remaining', null)
+            ->assertDontSee('remaining');
+    });
+});

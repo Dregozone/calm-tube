@@ -6,6 +6,7 @@ use App\Models\Channel;
 use App\Models\Video;
 use App\Support\RefreshResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Livewire\Attributes\On;
@@ -228,6 +229,7 @@ new #[Title('Feed')] class extends Component
 
         return [
             'videos' => $this->videos(),
+            'remaining' => $this->remainingForHumans(),
             'channels' => $channels,
             'followsNothing' => Channel::query()->followed()->doesntExist(),
             // "All caught up" is only true if there was anything to catch up
@@ -250,22 +252,66 @@ new #[Title('Feed')] class extends Component
      */
     private function videos(): LengthAwarePaginator
     {
+        return $this->feedQuery()
+            ->with('channel')
+            ->orderByDesc('published_at')
+            ->paginate((int) config('calm-tube.feed.per_page'));
+    }
+
+    /**
+     * What it would take to get through everything the filters are showing,
+     * every page of it rather than only the one in front of you, as H:MM.
+     *
+     * Each video counts what its card says it will take: the channel's speed
+     * applied, the outro left off, and only what is left of one you are part
+     * way through. A watched video has nothing remaining, so the All tab and
+     * the Unwatched tab give the same answer. Null when there is nothing to
+     * add up, rather than a heading claiming 0:00.
+     */
+    private function remainingForHumans(): ?string
+    {
+        $seconds = $this->feedQuery()
+            ->unwatched()
+            ->whereNotNull('duration_seconds')
+            ->with('channel')
+            ->get(['id', 'channel_id', 'duration_seconds', 'resume_seconds', 'watched_at'])
+            ->sum(fn (Video $video): int => (int) $video->watching_seconds);
+
+        $minutes = (int) round($seconds / 60);
+
+        if ($minutes === 0) {
+            return null;
+        }
+
+        return sprintf('%d:%02d', intdiv($minutes, 60), $minutes % 60);
+    }
+
+    /**
+     * The feed as the filters have narrowed it, before ordering or paging.
+     *
+     * @return Builder<Video>
+     */
+    private function feedQuery(): Builder
+    {
         return Video::query()
             ->inFeed()
-            ->with('channel')
             ->when($this->filter === 'unwatched', fn ($query) => $query->unwatched())
             ->when($this->channel !== '', fn ($query) => $query->whereRelation(
                 'channel', 'youtube_channel_id', $this->channel
             ))
-            ->when($this->heldBackSince, fn ($query) => $query->where('created_at', '<=', $this->heldBackSince))
-            ->orderByDesc('published_at')
-            ->paginate((int) config('calm-tube.feed.per_page'));
+            ->when($this->heldBackSince, fn ($query) => $query->where('created_at', '<=', $this->heldBackSince));
     }
 }; ?>
 
 <section class="w-full" @if ($stale) wire:init="autoRefresh" @endif>
     <div class="flex flex-wrap items-start justify-between gap-4">
-        <flux:heading size="xl" level="1">{{ __('Feed') }}</flux:heading>
+        <flux:heading size="xl" level="1">
+            {{ __('Feed') }}
+
+            @if ($remaining)
+                <span class="font-normal text-zinc-500 dark:text-zinc-400" title="{{ __('Time left to watch everything shown, at each channel’s speed') }}">({{ $remaining }}<span class="hidden sm:inline"> {{ __('remaining') }}</span>)</span>
+            @endif
+        </flux:heading>
 
         <div class="flex flex-wrap items-center gap-3">
             @if ($lastRefreshedAt)
