@@ -92,7 +92,7 @@ The home of the app. One reverse-chronological grid across all enabled channels.
 │ CALM TUBE          Feed   Channels                              [avatar ▾]   │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  Feed                                            Last refreshed 14 min ago   │
+│  Feed (3:25 remaining)                           Last refreshed 14 min ago   │
 │                                                          [ ⟳ Refresh all ]   │
 │                                                                              │
 │  [ All | Unwatched ]        Channel: [ All channels        ▾ ]               │
@@ -126,6 +126,13 @@ Watched cards are dimmed to ~55% opacity with a "watched" marker; hover reveals 
 **Filters:** `all | unwatched` segmented control and a channel dropdown. Both are Livewire
 `#[Url]` properties, so the state lives in the query string (`/feed?filter=unwatched&channel=UC…`)
 and survives refreshes and the back button. Changing a filter resets to page 1.
+
+**Remaining watch time:** the heading carries how long everything the filters show would take
+to watch — `Feed (3:25 remaining)`, shortened to `Feed (3:25)` below `sm`. It is the sum of each
+unwatched video's card time (channel speed applied, outro left off, only what is left of one
+you are part way through) across every page, not just the one on screen. Watched videos count
+nothing, so the All and Unwatched tabs agree; the channel filter narrows it. Nothing to add up,
+and the parenthesis is left off rather than claiming `0:00`.
 
 **No Shorts filter exists**, because Shorts are never stored in a displayable state. This is
 intentional: see [01-overview.md](01-overview.md#non-goals).
