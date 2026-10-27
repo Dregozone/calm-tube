@@ -600,7 +600,9 @@ and dropping a video because we could not measure it is the one outcome this mus
 **Nothing is deleted or hidden.** `sampled_out_at` is checked by `scopeInFeed()` and
 deliberately *not* by `scopeViewable()`, so a set-aside video stays on its channel page, has
 its own filter tab there, and is one click away. The feed says what the rule did rather than
-quietly dropping things.
+quietly dropping things: how many videos published **this week** (since Monday) the limits set
+aside, with a link to the channels. This week rather than all time, because it is the pool a
+weekly channel is still to be picked from and it shows how hard the limits are filtering now.
 
 ### Snoozing a channel
 

@@ -366,14 +366,40 @@ describe('sampled channels in the feed', function (): void {
     });
 
     it('says what the rule did rather than quietly dropping things', function (): void {
+        $this->travelTo(now()->next('Thursday')->setTime(12, 0));
         $channel = calmChannel(['sample_limit' => 3]);
         Video::factory()->for($channel)->create();
-        Video::factory()->for($channel)->setAside()->count(11)->create();
+        Video::factory()->for($channel)->setAside()->count(11)->create(['published_at' => now()->subDay()]);
 
         Livewire::test('pages::feed')
-            ->assertSee('Sampling set aside')
-            ->assertSee('11')
-            ->assertSee(CALM_CHANNEL_TITLE);
+            ->assertSee('Sampling set aside 11 videos.')
+            ->assertSee('Published this week (since Monday)')
+            ->assertSee('See your channels.');
+    });
+
+    it('counts only this week, not everything ever set aside', function (): void {
+        $this->travelTo(now()->next('Wednesday')->setTime(12, 0));
+        $channel = calmChannel(['sample_limit' => 3]);
+        Video::factory()->for($channel)->setAside()->count(2)->create(['published_at' => now()->startOfWeek()->addHour()]);
+        Video::factory()->for($channel)->setAside()->count(5)->create(['published_at' => now()->startOfWeek()->subHour()]);
+
+        Livewire::test('pages::feed')->assertSee('Sampling set aside 2 videos.');
+    });
+
+    it('stays quiet when everything set aside is from an earlier week', function (): void {
+        $channel = calmChannel(['sample_limit' => 3]);
+        Video::factory()->for($channel)->setAside()->count(4)->create(['published_at' => now()->subWeeks(2)]);
+
+        Livewire::test('pages::feed')->assertDontSee('Sampling set aside');
+    });
+
+    it('leaves the channel names out to keep it short', function (): void {
+        $channel = calmChannel(['sample_limit' => 3]);
+        Video::factory()->for($channel)->setAside()->create(['published_at' => now()]);
+
+        Livewire::test('pages::feed')
+            ->assertSee('Sampling set aside 1 video.')
+            ->assertDontSee('videos from');
     });
 
     it('stays quiet when no channel is sampled', function (): void {
