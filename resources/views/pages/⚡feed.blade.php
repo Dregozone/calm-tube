@@ -7,6 +7,7 @@ use App\Models\Video;
 use App\Support\RefreshResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Livewire\Attributes\On;
@@ -235,12 +236,16 @@ new #[Title('Feed')] class extends Component
             // "All caught up" is only true if there was anything to catch up
             // on. An empty library needs a refresh, not congratulations.
             'hasVideos' => Video::query()->inFeed()->exists(),
-            'sampledChannels' => Channel::query()
-                ->enabled()
-                ->whereNotNull('sample_limit')
-                ->withCount(['videos as set_aside_count' => fn ($query) => $query->setAside()])
-                ->orderBy('title')
-                ->get(),
+            // This week's selection rather than all time: it is the pool a
+            // weekly channel is still to be picked from, and it shows how much
+            // the limits are filtering now rather than ever.
+            'setAsideThisWeek' => Video::query()
+                ->setAside()
+                ->where('published_at', '>=', now()->startOfWeek(Carbon::MONDAY))
+                ->whereHas('channel', fn (Builder $channelQuery): Builder => $channelQuery
+                    ->enabled()
+                    ->whereNotNull('sample_limit'))
+                ->count(),
             'lastRefreshedAt' => $channels->max('last_refreshed_at'),
             'missingApiKey' => config('calm-tube.api_key') === null,
             'stale' => $this->heldBackSince === null && $this->isStale($channels),
@@ -408,15 +413,15 @@ new #[Title('Feed')] class extends Component
         </div>
     @endunless
 
-    @if ($sampledChannels->isNotEmpty() && $sampledChannels->sum('set_aside_count') > 0)
+    @if ($setAsideThisWeek > 0)
         <flux:text size="sm" class="mt-4 block">
-            {{ __('Sampling set aside') }}
-            {{ $sampledChannels->sum('set_aside_count') }}
-            {{ __('videos from') }}
-            {{ $sampledChannels->pluck('display_name')->join(', ', ' and ') }}.
+            {{ trans_choice('Sampling set aside :count video.|Sampling set aside :count videos.', $setAsideThisWeek) }}
             <a href="{{ route('channels.index') }}" wire:navigate class="underline">
-                {{ __('They are on their channel pages.') }}
+                {{ __('See your channels.') }}
             </a>
+            <span class="block">
+                {{ __('Published this week (since Monday) and kept out of your feed by your channel limits.') }}
+            </span>
         </flux:text>
     @endif
 
