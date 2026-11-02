@@ -284,8 +284,8 @@ ready in case the browser refused the first attempt. If it refuses both, the pos
 the play button is where it always was.
 
 This is not the autoplay the app exists to avoid. That one chooses the *next* video for you,
-and nothing here ever will. A part-watched video is the exception — it has a resume prompt to
-put to you first, so it waits. `calm-tube.player.autoplay` turns it off.
+and nothing here ever will. A part-watched video plays too, from where you stopped.
+`calm-tube.player.autoplay` turns it off.
 
 ### Resuming
 
@@ -294,10 +294,11 @@ The embedded player forgets where you were between visits, so the position is wr
 `saveProgress()` calls `skipRender()`: a round trip every ten seconds is cheap, re-rendering
 the page around it is not.
 
-Reopening a part-watched video **offers** to resume rather than seeking behind your back — a
-video that silently starts in the middle feels broken, and sometimes you did mean to start
-again. Below fifteen seconds in, or within fifteen seconds of the end, there is nothing worth
-resuming and the prompt does not appear.
+Reopening a part-watched video **carries on** from where you stopped, without asking: the embed
+URL gets `start=<resume_seconds>`, so the first frame you see is the right one rather than a
+flash of the opening before a seek. Going back to the start is the player's own timeline, or
+`←`. Below fifteen seconds in, or within fifteen seconds of the end, there is nothing worth
+resuming and the video starts from the top.
 
 Finishing, replaying, starting again, and marking watched or unwatched all clear the position.
 

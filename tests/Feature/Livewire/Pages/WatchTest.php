@@ -87,12 +87,12 @@ describe('starting the video', function (): void {
             ->assertSee('data-autoplay="1"', escape: false);
     });
 
-    it('waits when there is a resume prompt to answer first', function (): void {
+    it('plays a part-watched video without a second click too', function (): void {
         $video = watchable(['resume_seconds' => 1122, 'duration_seconds' => 2400]);
 
         Livewire::test('pages::watch', ['video' => $video])
-            ->assertSee('autoplay=0', escape: false)
-            ->assertSee('data-autoplay="0"', escape: false);
+            ->assertSee('autoplay=1', escape: false)
+            ->assertSee('data-autoplay="1"', escape: false);
     });
 
     it('has nothing to start when YouTube no longer has the video', function (): void {
@@ -532,23 +532,28 @@ describe('the end-card mask', function (): void {
 });
 
 describe('picking up where you left off', function (): void {
-    it('offers to resume rather than silently starting in the middle', function (): void {
+    it('carries on from where you stopped without asking', function (): void {
         $video = watchable(['resume_seconds' => 1122, 'duration_seconds' => 2400]);
 
         $this->get(route('videos.watch', $video))
-            ->assertSee('You stopped at')
-            ->assertSee('18:42')
-            ->assertSee('Start again')
-            ->assertSee('data-resume-seconds="1122"', escape: false);
+            ->assertSee('start=1122', escape: false)
+            ->assertDontSee('calm-resume', escape: false);
     });
 
-    it('says nothing about resuming a video you have not started', function (): void {
+    it('starts from the top a video you have not started', function (): void {
         $video = watchable(['resume_seconds' => null]);
 
-        $this->get(route('videos.watch', $video))
-            ->assertDontSee('You stopped at')
-            ->assertSee('data-resume-seconds="0"', escape: false);
+        $this->get(route('videos.watch', $video))->assertDontSee('start=', escape: false);
     });
+
+    it('starts from the top when you were barely in or nearly done', function (int $seconds): void {
+        $video = watchable(['resume_seconds' => $seconds, 'duration_seconds' => 2400]);
+
+        $this->get(route('videos.watch', $video))->assertDontSee('start=', escape: false);
+    })->with([
+        'barely in' => 8,
+        'nearly done' => 2395,
+    ]);
 
     it('stores the position the player reports', function (): void {
         $video = watchable();

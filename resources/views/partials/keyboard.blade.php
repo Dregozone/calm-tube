@@ -94,7 +94,7 @@
 
     if (request()->routeIs('videos.watch')) {
         $shortcutGroups[__('Watching')] = [
-            ['Space', null, __('Play or pause (or resume)')],
+            ['Space', null, __('Play or pause')],
             ['k', null, __('Play or pause')],
             ['←', null, __('Back :n seconds', ['n' => config('calm-tube.player.seek_seconds')])],
             ['→', null, __('Forward :n seconds', ['n' => config('calm-tube.player.seek_seconds')])],
