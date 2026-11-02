@@ -601,7 +601,7 @@ describe('remaining watch time', function (): void {
         Video::factory()->for(calmChannel())->watched()->create(['duration_seconds' => 600]);
 
         Livewire::test('pages::feed')
-            ->assertViewHas('remaining', null)
+            ->assertViewHas('remaining', fn (?string $remaining): bool => $remaining === null)
             ->assertDontSee('remaining');
     });
 });

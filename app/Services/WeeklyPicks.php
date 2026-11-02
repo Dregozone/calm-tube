@@ -77,6 +77,7 @@ class WeeklyPicks
         $waiting = $channel->videos()
             ->viewable()
             ->unsnoozed()
+            ->offReadingList()
             ->untouched()
             ->setAside()
             ->where('published_at', '<', $thisWeek)
@@ -96,10 +97,13 @@ class WeeklyPicks
         $ofTheWeek = fn () => $channel->videos()
             ->viewable()
             ->unsnoozed()
+            ->offReadingList()
             ->where('published_at', '>=', $start)
             ->where('published_at', '<', $start->addWeek());
 
-        // Yours, not the rule's. They also spend the week's budget.
+        // Yours, not the rule's. They also spend the week's budget. Reading
+        // list videos are the videos page's, so they neither spend it nor
+        // take a pick.
         $touched = $ofTheWeek()->touched()->get();
         $this->mark($touched, null);
 
@@ -160,7 +164,7 @@ class WeeklyPicks
                 );
             }
 
-            $graceEnds = $start->addWeek()->addDays((int) config('calm-tube.weekly.grace_days'));
+            $graceEnds = $this->closesAt($start)->addDays((int) config('calm-tube.weekly.grace_days'));
 
             if (Date::now()->lt($graceEnds)) {
                 return null;
@@ -318,6 +322,7 @@ class WeeklyPicks
         return array_values($channel->videos()
             ->viewable()
             ->unsnoozed()
+            ->offReadingList()
             ->pluck('published_at')
             ->map(fn (mixed $publishedAt): string => $this->weekOf(CarbonImmutable::parse($publishedAt))->toDateString())
             ->unique()
@@ -326,12 +331,21 @@ class WeeklyPicks
 
     private function isClosed(CarbonImmutable $start): bool
     {
-        return $start->addWeek()->lte(Date::now());
+        return $this->closesAt($start)->lte(Date::now());
+    }
+
+    /**
+     * The week ends at midnight on Sunday, but is only decided a few hours
+     * into Monday, away from everything else the server does at midnight.
+     */
+    private function closesAt(CarbonImmutable $start): CarbonImmutable
+    {
+        return $start->addWeek()->addHours((int) config('calm-tube.weekly.closes_at_hour'));
     }
 
     private function lastClosedWeek(): CarbonImmutable
     {
-        return $this->weekOf(Date::now())->subWeek();
+        return $this->weekOf(Date::now()->subHours((int) config('calm-tube.weekly.closes_at_hour')))->subWeek();
     }
 
     private function weekOf(\DateTimeInterface $moment): CarbonImmutable

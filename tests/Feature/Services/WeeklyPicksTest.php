@@ -62,6 +62,39 @@ it('releases what the model picks once the week is over, with its reason', funct
         ->and(ChannelDigest::sole()->method)->toBe(ChannelDigest::METHOD_AI);
 });
 
+it('keeps holding the week until two in the morning on Monday', function (): void {
+    $this->travelTo('2026-09-21 01:59:00');
+    $picked = weeklyUpload($this->channel, '2026-09-16 10:00:00');
+    WeeklyPicker::fake([['picks' => [['number' => 1, 'reason' => 'One.']]]]);
+
+    settleWeeks($this->channel);
+
+    expect(Video::inFeed()->count())->toBe(0)
+        ->and(ChannelDigest::count())->toBe(0);
+    WeeklyPicker::assertNeverPrompted();
+
+    $this->travelTo('2026-09-21 02:00:00');
+    settleWeeks($this->channel->fresh());
+
+    expect(Video::inFeed()->pluck('id')->all())->toBe([$picked->id])
+        ->and(ChannelDigest::sole()->method)->toBe(ChannelDigest::METHOD_AI);
+});
+
+it('never counts a reading list video against the week or offers it as a pick', function (): void {
+    weeklyUpload($this->channel, '2026-09-14 10:00:00', attributes: ['title' => 'Watched from the reading list', 'on_reading_list_at' => now(), 'watched_at' => now()]);
+    weeklyUpload($this->channel, '2026-09-15 10:00:00', attributes: ['title' => 'Waiting on the reading list', 'on_reading_list_at' => now()]);
+    $first = weeklyUpload($this->channel, '2026-09-16 10:00:00');
+    $second = weeklyUpload($this->channel, '2026-09-17 10:00:00');
+    WeeklyPicker::fake([['picks' => [['number' => 1, 'reason' => 'One.'], ['number' => 2, 'reason' => 'Two.']]]]);
+
+    settleWeeks($this->channel);
+
+    expect(Video::inFeed()->pluck('id')->sort()->values()->all())->toBe([$first->id, $second->id])
+        ->and(ChannelDigest::sole()->picked_video_ids)->toBe([$first->id, $second->id]);
+    WeeklyPicker::assertPrompted(fn (AgentPrompt $prompt): bool => $prompt->contains('Choose at most 2')
+        && ! $prompt->contains('Waiting on the reading list'));
+});
+
 it('releases nothing when the model thinks nothing is worth it', function (): void {
     weeklyUpload($this->channel, '2026-09-15 10:00:00');
     WeeklyPicker::fake([['picks' => []]]);

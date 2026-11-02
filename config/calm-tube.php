@@ -172,15 +172,18 @@ return [
     |--------------------------------------------------------------------------
     |
     | A channel sampled by the week holds its uploads until the week closes
-    | (Monday to Sunday), then keeps the best few. The first refresh after the
-    | week ends asks the model. If it cannot answer, the week stays held and
-    | the next refresh asks again, until grace_days have passed, when the
-    | longest uploads are kept instead. Only the most recently closed week is
+    | (Monday to Sunday), then keeps the best few. The week closes at
+    | closes_at_hour on Monday (app timezone), kept clear of midnight when the
+    | server is busiest, and the first refresh after that asks the model. If
+    | it cannot answer, the week stays held and the next refresh asks again,
+    | until grace_days have passed, when the longest uploads are kept instead. Only the most recently closed week is
     | ever put to the model; anything older is settled by length.
     |
     */
 
     'weekly' => [
+        'closes_at_hour' => 2,
+
         'grace_days' => 2,
 
         // How much of your history with the channel the model is shown.
