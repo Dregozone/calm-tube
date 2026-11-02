@@ -43,11 +43,6 @@ real use — if "mark as watched" is being clicked constantly, build it.
 `04:12` in a description could call `player.seekTo(252)`. Genuinely useful for long videos,
 and low risk. Deferred purely to keep Phase 8 small.
 
-### Resuming playback
-
-Storing `resume_seconds` and passing `start=` would let long videos continue where you left
-off. Needs the same polling as the 90% rule, so the two should be built together or not at all.
-
 ### A "watch later" queue
 
 Distinct from unwatched: an explicit, ordered, short list of things you've decided to watch.

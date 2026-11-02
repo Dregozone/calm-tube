@@ -250,6 +250,10 @@ new class extends Component
             'iv_load_policy' => 3,
             'enablejsapi' => 1,
             'autoplay' => $this->shouldAutoplay() ? 1 : 0,
+            // A part-watched video carries on where you stopped. Asked for
+            // here rather than seeked to on ready, so the first frame you see
+            // is the right one; the timeline is still there to go back.
+            'start' => $this->video->isResumable() ? $this->video->resume_seconds : null,
             // The page's own origin, not APP_URL: the player posts its API
             // messages here, and one scheme or host out means the browser
             // drops them, so the video plays but ignores speed and events.
@@ -261,13 +265,11 @@ new class extends Component
      * You chose this video, so it plays.
      *
      * Not the autoplay this app exists to avoid: that one chooses the next
-     * video for you. A part-watched video is the exception, because the
-     * resume prompt has a question to ask before anything starts.
+     * video for you. A part-watched video plays too, from where you stopped.
      */
     public function shouldAutoplay(): bool
     {
         return (bool) config('calm-tube.player.autoplay')
-            && ! $this->video->isResumable()
             && ! $this->video->isUnavailable();
     }
 
@@ -362,7 +364,6 @@ new class extends Component
                     data-mask-seconds="{{ config('calm-tube.player.end_card_mask_seconds') }}"
                     data-outro-seconds="{{ $this->outroSeconds() }}"
                     data-seek-seconds="{{ config('calm-tube.player.seek_seconds') }}"
-                    data-resume-seconds="{{ $this->video->isResumable() ? $this->video->resume_seconds : 0 }}"
                     data-autoplay="{{ $this->shouldAutoplay() ? 1 : 0 }}"
                     data-celebrate="{{ $this->readingListItem ? 1 : 0 }}"
                     data-finish-percent="{{ $this->readingListItem ? config('calm-tube.reading_list.finished_at_percent') : 0 }}"
@@ -377,32 +378,6 @@ new class extends Component
                         allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                         allowfullscreen
                     ></iframe>
-
-                    {{-- Offered, never applied behind your back: a video that
-                         silently starts in the middle feels broken, and sometimes
-                         you did mean to watch it again from the top. --}}
-                    @if ($this->video->isResumable())
-                        <div
-                            id="calm-resume"
-                            class="absolute inset-x-0 bottom-0 z-20 flex flex-wrap items-center justify-center gap-3 bg-zinc-950/90 p-4 text-center"
-                            data-resume-label="{{ $this->video->resume_for_humans }}"
-                        >
-                            <flux:text class="text-white">
-                                {{ __('You stopped at') }}
-                                <span class="tabular-nums">{{ $this->video->resume_for_humans }}</span>.
-                            </flux:text>
-
-                            <div class="flex items-center gap-2">
-                                <flux:button id="calm-resume-go" variant="primary" size="sm">
-                                    {{ __('Resume') }}
-                                </flux:button>
-
-                                <flux:button id="calm-resume-restart" variant="subtle" size="sm" class="!text-white">
-                                    {{ __('Start again') }}
-                                </flux:button>
-                            </div>
-                        </div>
-                    @endif
 
                     {{-- Transparent, and only for the last seconds of the video:
                          it covers the end cards YouTube draws over the picture,
@@ -702,8 +677,6 @@ new class extends Component
         const maskFrom = Number(stage.dataset.maskSeconds || 0);
         let outro = Number(stage.dataset.outroSeconds || 0);
         const seekStep = Number(stage.dataset.seekSeconds || 10);
-        const resumeAt = Number(stage.dataset.resumeSeconds || 0);
-        const resumePanel = document.getElementById('calm-resume');
         const autoplay = stage.dataset.autoplay === '1';
         const celebrate = stage.dataset.celebrate === '1' && celebration !== null;
         const finishPercent = Number(stage.dataset.finishPercent || 0);
@@ -920,7 +893,6 @@ new class extends Component
                                 stopCountdown();
                             }
 
-                            conceal(resumePanel);
                             watchForEndCards();
                             recordProgress();
                             // YouTube resets the rate when a video actually
@@ -977,21 +949,6 @@ new class extends Component
             // not take that away, only the end cards underneath it.
             mask?.addEventListener('click', () => player.pauseVideo());
 
-            const resume = () => {
-                conceal(resumePanel);
-                player.seekTo(resumeAt, true);
-                player.playVideo();
-            };
-
-            document.getElementById('calm-resume-go')?.addEventListener('click', resume);
-
-            document.getElementById('calm-resume-restart')?.addEventListener('click', () => {
-                conceal(resumePanel);
-                $wire.clearProgress();
-                player.seekTo(0, true);
-                player.playVideo();
-            });
-
             // Closing the tab mid-video is the ordinary way to leave one.
             window.addEventListener('pagehide', () => stopRecording(), { signal });
 
@@ -1025,12 +982,6 @@ new class extends Component
             };
 
             const togglePlaying = () => {
-                if (resumePanel?.classList.contains('flex')) {
-                    resume();
-
-                    return;
-                }
-
                 player.getPlayerState() === YT.PlayerState.PLAYING
                     ? player.pauseVideo()
                     : player.playVideo();
