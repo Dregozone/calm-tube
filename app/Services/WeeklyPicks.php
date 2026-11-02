@@ -11,9 +11,7 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Str;
-use Laravel\Ai\Responses\StructuredAgentResponse;
 use Throwable;
-use UnexpectedValueException;
 
 /**
  * Holds a channel's uploads until its week is over, then keeps the best few.
@@ -203,12 +201,6 @@ class WeeklyPicks
                 model: (string) config('calm-tube.ai.model'),
                 timeout: (int) config('calm-tube.ai.timeout'),
             );
-
-            // Always the case for an agent with structured output; anything
-            // else is treated like an unreachable model, so the week waits.
-            if (! $response instanceof StructuredAgentResponse) {
-                throw new UnexpectedValueException('The model did not answer with structured output.');
-            }
 
             $answer = $response['picks'] ?? [];
         } catch (Throwable $exception) {
