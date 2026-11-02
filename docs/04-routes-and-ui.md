@@ -621,8 +621,9 @@ is created. Refreshes carry on as normal throughout, so nothing about the archiv
 
 For a channel where even one or two a day is too many, `channels.sample_period = week` changes
 what the limit counts. Uploads are **held** (`sampled_out_at`) for the whole week, Monday to
-Sunday. The first refresh after the week closes puts it to the local model (`WeeklyPicks`,
-`App\Ai\Agents\WeeklyPicker`) with:
+Sunday. The week closes at 02:00 on Monday (`calm-tube.weekly.closes_at_hour`, app timezone),
+clear of everything else the server does at midnight, and the first refresh after that puts it
+to the local model (`WeeklyPicks`, `App\Ai\Agents\WeeklyPicker`) with:
 
 - `channels.sample_note`: what you want from the channel, in your words;
 - the titles you finished, started but abandoned, and hid from it;
