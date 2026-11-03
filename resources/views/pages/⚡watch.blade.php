@@ -952,6 +952,19 @@ new class extends Component
             // Closing the tab mid-video is the ordinary way to leave one.
             window.addEventListener('pagehide', () => stopRecording(), { signal });
 
+            // The other way is a link, and wire:navigate fires no pagehide.
+            // Left running, the timers outlive the page: the player keeps
+            // reporting the moment you left, so every return visit would be
+            // overwritten with it ten seconds at a time. Not on the signal,
+            // which is aborted by an earlier listener for this same event.
+            // Only a playing video has a new position; pausing saved the rest.
+            document.addEventListener('livewire:navigating', () => {
+                stopCountdown();
+                stopWatching();
+                stopRecording(recording !== null);
+                player.destroy?.();
+            }, { once: true });
+
             document.getElementById('calm-replay')?.addEventListener('click', () => {
                 stopCountdown();
                 conceal(ended);

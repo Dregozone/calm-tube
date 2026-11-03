@@ -290,7 +290,10 @@ and nothing here ever will. A part-watched video plays too, from where you stopp
 ### Resuming
 
 The embedded player forgets where you were between visits, so the position is written to
-`videos.resume_seconds` every ten seconds while the video plays, on pause, and on `pagehide`.
+`videos.resume_seconds` every ten seconds while the video plays, on pause, on `pagehide`, and on
+`livewire:navigating`. That last one also stops the timers and destroys the player: a
+`wire:navigate` visit fires no `pagehide`, and a timer left running goes on writing the old
+page's position over every later visit to the same video.
 `saveProgress()` calls `skipRender()`: a round trip every ten seconds is cheap, re-rendering
 the page around it is not.
 
