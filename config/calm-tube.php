@@ -54,6 +54,12 @@ return [
         // after the page has rendered, so the app stays current without a
         // scheduler running in the background. 0 turns it off.
         'auto_after_hours' => env('CALM_TUBE_AUTO_REFRESH_HOURS', 2),
+
+        // That refresh goes a few channels per request, starting no new one
+        // after this long, and the page asks for the next few. Every channel
+        // in one request took longer than the 60 seconds nginx waits, and
+        // the page behind the proxy answered with a 504.
+        'auto_batch_seconds' => 15,
     ],
 
     /*

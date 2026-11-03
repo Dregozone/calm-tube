@@ -458,6 +458,34 @@ describe('refreshing a feed nobody has looked at', function (): void {
         Bus::assertDispatchedSyncTimes(RefreshChannel::class, 2);
     });
 
+    it('goes a few channels per request so none outlasts the proxy', function (): void {
+        Bus::fake([RefreshChannel::class]);
+        config()->set('calm-tube.refresh.auto_batch_seconds', 0);
+        calmChannel(['last_refreshed_at' => now()->subHours(9)]);
+        Channel::factory()->count(2)->create(['last_refreshed_at' => now()->subHours(9)]);
+
+        $component = Livewire::test('pages::feed')->call('autoRefresh');
+
+        Bus::assertDispatchedSyncTimes(RefreshChannel::class, 1);
+        $component->assertJs('$wire.autoRefresh()');
+
+        $component->call('autoRefresh')->call('autoRefresh');
+
+        Bus::assertDispatchedSyncTimes(RefreshChannel::class, 3);
+        $component->assertNoJs()->assertSet('refreshQueue', []);
+    });
+
+    it('starts with the channel that has waited longest', function (): void {
+        Bus::fake([RefreshChannel::class]);
+        config()->set('calm-tube.refresh.auto_batch_seconds', 0);
+        calmChannel(['last_refreshed_at' => now()->subHours(3)]);
+        $longest = Channel::factory()->create(['last_refreshed_at' => now()->subDays(2)]);
+
+        Livewire::test('pages::feed')->call('autoRefresh');
+
+        Bus::assertDispatchedSync(RefreshChannel::class, fn (RefreshChannel $job): bool => $job->channel->is($longest));
+    });
+
     it('does nothing at all when the feed is fresh', function (): void {
         Bus::fake([RefreshChannel::class]);
         calmChannel(['last_refreshed_at' => now()->subMinutes(5)]);
