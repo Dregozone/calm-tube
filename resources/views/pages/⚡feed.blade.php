@@ -43,6 +43,16 @@ new #[Title('Feed')] class extends Component
     public int $heldBackCount = 0;
 
     /**
+     * Channels a refresh you did not ask for has still to reach, and when it
+     * began, while it works through them a few requests at a time.
+     *
+     * @var list<int>
+     */
+    public array $refreshQueue = [];
+
+    public ?string $refreshStartedAt = null;
+
+    /**
      * Opened without filters in the URL, the feed picks up where you left off.
      * Coming back from a video is the case that matters: watch something with
      * the unwatched filter on and you should land back on the unwatched list,
@@ -146,19 +156,36 @@ new #[Title('Feed')] class extends Component
      * This is why the app needs no scheduler and no queue worker: opening it
      * is the trigger. Run through wire:init so the grid is on screen and
      * usable before any of it starts.
+     *
+     * Every channel at once is a minute and a half of HTTP, longer than the
+     * proxy in front of the site will wait, so each request takes the
+     * stalest few that fit the batch budget and asks the page for the next.
      */
     public function autoRefresh(): void
     {
-        $channels = Channel::query()->enabled()->get();
+        if ($this->refreshQueue === []) {
+            $channels = Channel::query()->enabled()->get();
 
-        if (! $this->isStale($channels)) {
-            return;
+            if (! $this->isStale($channels)) {
+                return;
+            }
+
+            $this->refreshQueue = $channels
+                ->sortBy(fn (Channel $channel): int => $channel->last_refreshed_at?->getTimestamp() ?? 0)
+                ->modelKeys();
+            $this->refreshStartedAt = now()->toDateTimeString();
         }
 
-        $since = now();
+        $deadline = now()->addSeconds((int) config('calm-tube.refresh.auto_batch_seconds'));
         $new = 0;
 
-        foreach ($channels as $channel) {
+        do {
+            $channel = Channel::query()->enabled()->find(array_shift($this->refreshQueue));
+
+            if ($channel === null) {
+                continue;
+            }
+
             $result = RefreshChannel::dispatchSync($channel, RefreshTrigger::Stale);
 
             if ($result instanceof RefreshResult && ! $result->isFailed()) {
@@ -166,6 +193,10 @@ new #[Title('Feed')] class extends Component
                 // not announce itself as videos waiting for you.
                 $new += $result->reachedFeed;
             }
+        } while ($this->refreshQueue !== [] && now()->lt($deadline));
+
+        if ($this->refreshQueue !== []) {
+            $this->js('$wire.autoRefresh()');
         }
 
         if ($new === 0) {
@@ -174,9 +205,10 @@ new #[Title('Feed')] class extends Component
 
         // Announced, not inserted. Arriving somewhere new is always your
         // click, and a grid that reshuffles while you are reading it is the
-        // feed behaviour this app exists to avoid.
-        $this->heldBackSince = $since->toDateTimeString();
-        $this->heldBackCount = $new;
+        // feed behaviour this app exists to avoid. Held back from when the
+        // refresh began, so an earlier batch's arrivals stay held back too.
+        $this->heldBackSince ??= $this->refreshStartedAt;
+        $this->heldBackCount += $new;
     }
 
     public function showNew(): void
@@ -184,6 +216,11 @@ new #[Title('Feed')] class extends Component
         $this->heldBackSince = null;
         $this->heldBackCount = 0;
         $this->resetPage();
+
+        // A refresh still going holds back only what arrives from here on.
+        if ($this->refreshQueue !== []) {
+            $this->refreshStartedAt = now()->toDateTimeString();
+        }
     }
 
     /**
@@ -210,6 +247,7 @@ new #[Title('Feed')] class extends Component
     public function refreshAll(): void
     {
         $this->undoable = [];
+        $this->refreshQueue = [];
         $this->showNew();
 
         $results = Channel::query()->enabled()->get()
