@@ -136,6 +136,14 @@ class VideoFactory extends Factory
         return $this->state(fn (): array => ['on_reading_list_at' => now()]);
     }
 
+    /**
+     * Moved off the main feed onto its Saved tab.
+     */
+    public function savedForLater(): static
+    {
+        return $this->state(fn (): array => ['saved_for_later_at' => now()]);
+    }
+
     public function archived(): static
     {
         return $this->state(fn (array $attributes): array => [

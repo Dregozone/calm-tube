@@ -8,16 +8,20 @@ new class extends Component
 {
     public Video $video;
 
+    /**
+     * Watching a saved video is what it was saved for, so it leaves the
+     * Saved tab; marking it unwatched again does not put it back.
+     */
     public function toggleWatched(): void
     {
-        $this->video->forceFill([
-            'watched_at' => $this->video->isWatched() ? null : now(),
-        ])->save();
+        $this->video->isWatched()
+            ? $this->video->forceFill(['watched_at' => null])->save()
+            : $this->video->forceFill(['watched_at' => now(), 'saved_for_later_at' => null])->save();
     }
 
     public function hide(): void
     {
-        $this->video->forceFill(['hidden_at' => now()])->save();
+        $this->video->forceFill(['hidden_at' => now(), 'saved_for_later_at' => null])->save();
 
         $this->dispatch('feed-changed');
     }

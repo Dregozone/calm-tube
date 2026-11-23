@@ -7,6 +7,7 @@ use App\Models\Video;
 use App\Support\RefreshResult;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Pagination\LengthAwarePaginator as PageOfVideos;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Date;
@@ -20,9 +21,13 @@ new #[Title('Feed')] class extends Component
 {
     use WithPagination;
 
-    /** all | unwatched */
+    /** all | unwatched | saved */
     #[Url]
     public string $filter = 'all';
+
+    /** newest | oldest | longest | shortest */
+    #[Url]
+    public string $sort = 'newest';
 
     /** A YouTube channel id, or empty for every channel. */
     #[Url]
@@ -71,6 +76,10 @@ new #[Title('Feed')] class extends Component
             $this->channel = (string) session('calm-tube.feed.channel', '');
         }
 
+        if (! request()->has('sort')) {
+            $this->sort = (string) session('calm-tube.feed.sort', 'newest');
+        }
+
         $this->rememberFilters();
     }
 
@@ -84,6 +93,7 @@ new #[Title('Feed')] class extends Component
     {
         session()->put('calm-tube.feed.filter', $this->filter);
         session()->put('calm-tube.feed.channel', $this->channel);
+        session()->put('calm-tube.feed.sort', $this->sort);
     }
 
     #[On('feed-changed')]
@@ -295,10 +305,60 @@ new #[Title('Feed')] class extends Component
      */
     private function videos(): LengthAwarePaginator
     {
+        $perPage = (int) config('calm-tube.feed.per_page');
+
+        if (in_array($this->sort, ['longest', 'shortest'], true)) {
+            return $this->videosByTimeLeft($perPage);
+        }
+
         return $this->feedQuery()
             ->with('channel')
+            ->when(
+                $this->sort === 'oldest',
+                fn (Builder $query): Builder => $query->orderBy('published_at'),
+                fn (Builder $query): Builder => $query->orderByDesc('published_at'),
+            )
+            ->paginate($perPage);
+    }
+
+    /**
+     * Ordered by what each card says it will take: the channel's speed and
+     * outro applied and only what is left of one part watched. That is worked
+     * out in PHP by the model rather than repeated in SQL, so the whole
+     * filtered set is ranked and only the page in front of you is loaded in
+     * full, the same way the remaining time is added up.
+     *
+     * A video whose length is unknown goes last either way, and ties keep
+     * the newest first.
+     *
+     * @return LengthAwarePaginator<int, Video>
+     */
+    private function videosByTimeLeft(int $perPage): LengthAwarePaginator
+    {
+        $longestFirst = $this->sort === 'longest';
+
+        $ranked = $this->feedQuery()
+            ->with('channel')
             ->orderByDesc('published_at')
-            ->paginate((int) config('calm-tube.feed.per_page'));
+            ->get(['id', 'channel_id', 'duration_seconds', 'resume_seconds', 'watched_at'])
+            ->sortBy(fn (Video $video): array => [
+                $video->watching_seconds === null ? 1 : 0,
+                $longestFirst ? -($video->watching_seconds ?? 0) : ($video->watching_seconds ?? 0),
+            ])
+            ->pluck('id')
+            ->values();
+
+        $page = $this->getPage();
+        $ids = $ranked->forPage($page, $perPage)->all();
+
+        $videos = Video::query()
+            ->with('channel')
+            ->whereKey($ids)
+            ->get()
+            ->sortBy(fn (Video $video): int|false => array_search($video->id, $ids, true))
+            ->values();
+
+        return new PageOfVideos($videos, $ranked->count(), $perPage, $page);
     }
 
     /**
@@ -339,6 +399,13 @@ new #[Title('Feed')] class extends Component
         return Video::query()
             ->inFeed()
             ->when($this->filter === 'unwatched', fn ($query) => $query->unwatched())
+            // Saved for later is its own list: off the other two, and the only
+            // thing on its own tab.
+            ->when(
+                $this->filter === 'saved',
+                fn ($query) => $query->savedForLater(),
+                fn ($query) => $query->notSavedForLater(),
+            )
             ->when($this->channel !== '', fn ($query) => $query->whereRelation(
                 'channel', 'youtube_channel_id', $this->channel
             ))
@@ -426,7 +493,15 @@ new #[Title('Feed')] class extends Component
             <flux:radio.group wire:model.live="filter" variant="segmented" size="sm">
                 <flux:radio value="all">{{ __('All') }}</flux:radio>
                 <flux:radio value="unwatched">{{ __('Unwatched') }}</flux:radio>
+                <flux:radio value="saved">{{ __('Saved') }}</flux:radio>
             </flux:radio.group>
+
+            <flux:select wire:model.live="sort" size="sm" class="max-w-48" aria-label="{{ __('Sort by') }}">
+                <flux:select.option value="newest">{{ __('Newest first') }}</flux:select.option>
+                <flux:select.option value="oldest">{{ __('Oldest first') }}</flux:select.option>
+                <flux:select.option value="longest">{{ __('Longest first') }}</flux:select.option>
+                <flux:select.option value="shortest">{{ __('Shortest first') }}</flux:select.option>
+            </flux:select>
 
             <flux:select wire:model.live="channel" size="sm" class="max-w-64" data-calm-focus>
                 <flux:select.option value="">{{ __('All channels') }}</flux:select.option>
@@ -474,6 +549,14 @@ new #[Title('Feed')] class extends Component
             <flux:button :href="route('channels.index')" wire:navigate variant="primary" class="mt-6">
                 {{ __('Add a channel') }}
             </flux:button>
+        </div>
+    @elseif ($videos->isEmpty() && $filter === 'saved')
+        <div class="mt-16 text-center">
+            <flux:heading size="lg">{{ __('Nothing saved for later.') }}</flux:heading>
+
+            <flux:text class="mt-2">
+                {{ __('Save a video from its page to keep it here, out of your main feed.') }}
+            </flux:text>
         </div>
     @elseif ($videos->isEmpty() && $filter === 'unwatched' && $hasVideos)
         <div class="mt-16 text-center">
