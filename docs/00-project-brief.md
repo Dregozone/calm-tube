@@ -43,8 +43,9 @@ These are not preferences. Code that breaks them is wrong, however reasonable it
    silently swallows something wanted.
 
 3. **Nothing suggests another video.** No recommendations, no related content, no autoplay, no
-   infinite scroll, no view counts, no unread badges. Ordering is `published_at DESC` and
-   nothing else. The one exception is a single explicit "Next unwatched from this channel"
+   infinite scroll, no view counts, no unread badges. Ordering is `published_at DESC` unless
+   you pick another on the feed yourself: oldest first, or by time left to watch. Never an order
+   the app works out for you. The one exception is a single explicit "Next unwatched from this channel"
    button on the end-of-video panel.
 
 ## Key decisions already made
@@ -95,7 +96,7 @@ additions:
   [02-architecture.md](02-architecture.md#error-handling-and-degradation).
 - **One feed definition.** All exclusion rules live in `Video::scopeInFeed()`. Never hand-roll
   those `where` clauses at a call site.
-- **Nullable timestamps over booleans** for state: `watched_at`, `hidden_at`,
+- **Nullable timestamps over booleans** for state: `watched_at`, `hidden_at`, `saved_for_later_at`,
   `unavailable_at`, `enriched_at`.
 - **Logging** goes to the `calm` channel with `channel_id` and `video_id` context.
 

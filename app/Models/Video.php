@@ -40,6 +40,7 @@ use Illuminate\Support\Facades\Storage;
  * @property string|null $pick_reason
  * @property CarbonImmutable|null $snoozed_at
  * @property CarbonImmutable|null $on_reading_list_at
+ * @property CarbonImmutable|null $saved_for_later_at
  * @property CarbonImmutable|null $unavailable_at
  * @property CarbonImmutable|null $enriched_at
  * @property CarbonImmutable|null $created_at
@@ -70,6 +71,7 @@ use Illuminate\Support\Facades\Storage;
     'pick_reason',
     'snoozed_at',
     'on_reading_list_at',
+    'saved_for_later_at',
     'unavailable_at',
     'enriched_at',
 ])]
@@ -214,6 +216,30 @@ class Video extends Model
     public function scopeOffReadingList(Builder $query): void
     {
         $query->whereNull('on_reading_list_at');
+    }
+
+    /**
+     * Put aside from the watch page to watch another time. Still in the feed,
+     * but only on its Saved tab: the All and Unwatched tabs leave it out.
+     *
+     * @param  Builder<$this>  $query
+     */
+    public function scopeSavedForLater(Builder $query): void
+    {
+        $query->whereNotNull('saved_for_later_at');
+    }
+
+    /**
+     * @param  Builder<$this>  $query
+     */
+    public function scopeNotSavedForLater(Builder $query): void
+    {
+        $query->whereNull('saved_for_later_at');
+    }
+
+    public function isSavedForLater(): bool
+    {
+        return $this->saved_for_later_at !== null;
     }
 
     /**
@@ -381,6 +407,7 @@ class Video extends Model
             'sampled_out_at' => 'datetime',
             'snoozed_at' => 'datetime',
             'on_reading_list_at' => 'datetime',
+            'saved_for_later_at' => 'datetime',
             'unavailable_at' => 'datetime',
             'enriched_at' => 'datetime',
             'duration_seconds' => 'integer',

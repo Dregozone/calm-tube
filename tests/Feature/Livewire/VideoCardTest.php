@@ -181,6 +181,22 @@ describe('actions', function (): void {
 
         expect(Video::inFeed()->count())->toBe(0);
     });
+
+    it('takes a watched video off the saved list', function (): void {
+        $video = Video::factory()->for(calmChannel())->savedForLater()->create();
+
+        Livewire::test('video-card', ['video' => $video])->call('toggleWatched');
+
+        expect($video->fresh()->saved_for_later_at)->toBeNull();
+    });
+
+    it('takes a hidden video off the saved list', function (): void {
+        $video = Video::factory()->for(calmChannel())->savedForLater()->create();
+
+        Livewire::test('video-card', ['video' => $video])->call('hide');
+
+        expect($video->fresh()->saved_for_later_at)->toBeNull();
+    });
 });
 
 it('offers to go to or edit the channel from a right-click on its name', function (): void {

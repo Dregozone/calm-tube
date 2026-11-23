@@ -70,8 +70,25 @@ new class extends Component
             return;
         }
 
-        // Finished, so there is nothing left to resume.
-        $this->video->forceFill(['watched_at' => now(), 'resume_seconds' => null])->save();
+        // Finished, so there is nothing left to resume, and nothing left to
+        // save for later either.
+        $this->video->forceFill([
+            'watched_at' => now(),
+            'resume_seconds' => null,
+            'saved_for_later_at' => null,
+        ])->save();
+    }
+
+    /**
+     * Moves the video off the main feed onto its Saved tab, or back again.
+     * Only somewhere to put a video for another time: watching it, or hiding
+     * it, takes it off the Saved tab just the same.
+     */
+    public function toggleSavedForLater(): void
+    {
+        $this->video->forceFill([
+            'saved_for_later_at' => $this->video->isSavedForLater() ? null : now(),
+        ])->save();
     }
 
     public function markUnwatched(): void
@@ -286,10 +303,12 @@ new class extends Component
 
         $filter = (string) session('calm-tube.feed.filter', 'all');
         $channel = (string) session('calm-tube.feed.channel', '');
+        $sort = (string) session('calm-tube.feed.sort', 'newest');
 
         return route('feed', array_filter([
             'filter' => $filter === 'all' ? null : $filter,
             'channel' => $channel === '' ? null : $channel,
+            'sort' => $sort === 'newest' ? null : $sort,
         ]));
     }
 
@@ -474,6 +493,17 @@ new class extends Component
             <flux:button wire:click="toggleWatched" size="sm" variant="subtle">
                 {{ $this->video->isWatched() ? __('Mark as unwatched') : __('Mark as watched') }}
             </flux:button>
+
+            @unless ($this->video->isWatched())
+                <flux:button
+                    wire:click="toggleSavedForLater"
+                    size="sm"
+                    variant="subtle"
+                    :icon="$this->video->isSavedForLater() ? 'bookmark-slash' : 'bookmark'"
+                >
+                    {{ $this->video->isSavedForLater() ? __('Remove from saved') : __('Save for later') }}
+                </flux:button>
+            @endunless
 
             <a
                 href="{{ $this->watchOnYouTubeUrl() }}"

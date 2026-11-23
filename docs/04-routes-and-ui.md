@@ -95,7 +95,7 @@ The home of the app. One reverse-chronological grid across all enabled channels.
 │  Feed (3:25 remaining)                           Last refreshed 14 min ago   │
 │                                                          [ ⟳ Refresh all ]   │
 │                                                                              │
-│  [ All | Unwatched ]        Channel: [ All channels        ▾ ]               │
+│  [ All | Unwatched | Saved ]  [ Newest first ▾ ]  [ All channels ▾ ]         │
 │                                                                              │
 │  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐      │
 │  │                    │  │                    │  │░░░░░░░░░░░░░░░░░░░░│      │
@@ -123,9 +123,22 @@ The home of the app. One reverse-chronological grid across all enabled channels.
 archived title (2 lines, then truncate), channel avatar + display name, relative date.
 Watched cards are dimmed to ~55% opacity with a "watched" marker; hover reveals the actions.
 
-**Filters:** `all | unwatched` segmented control and a channel dropdown. Both are Livewire
-`#[Url]` properties, so the state lives in the query string (`/feed?filter=unwatched&channel=UC…`)
-and survives refreshes and the back button. Changing a filter resets to page 1.
+**Filters:** `all | unwatched | saved` segmented control, a sort dropdown and a channel
+dropdown. All three are Livewire `#[Url]` properties, so the state lives in the query string
+(`/feed?filter=unwatched&sort=shortest&channel=UC…`) and survives refreshes and the back button;
+they are remembered in the session too, so coming back from a video lands on the same view.
+Changing any of them resets to page 1.
+
+**Saved for later:** "Save for later" on the watch page sets `saved_for_later_at`, which moves
+the video off the All and Unwatched tabs and onto Saved. It is only somewhere to put a video for
+another time: watching it, or hiding it, clears the flag, and marking it unwatched again does not
+bring it back.
+
+**Sort:** newest first by default, then oldest first, longest first and shortest first. The
+length sorts use the time left to watch, the same figure as the card's badge (channel speed
+applied, outro left off, only what is left of one part watched), so they are ranked in PHP across
+the whole filtered set and only the page shown is loaded in full. A video of unknown length goes
+last either way. These are orders you choose; the app never picks one for you.
 
 **Remaining watch time:** the heading carries how long everything the filters show would take
 to watch — `Feed (3:25 remaining)`, shortened to `Feed (3:25)` below `sm`. It is the sum of each

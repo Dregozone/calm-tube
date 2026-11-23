@@ -152,6 +152,44 @@ describe('marking as watched', function (): void {
     });
 });
 
+describe('saving for later', function (): void {
+    it('saves a video for later', function (): void {
+        $this->freezeTime();
+        $video = watchable();
+
+        Livewire::test('pages::watch', ['video' => $video])
+            ->assertSee('Save for later')
+            ->call('toggleSavedForLater')
+            ->assertSee('Remove from saved');
+
+        expect($video->fresh()->saved_for_later_at->timestamp)->toBe(now()->timestamp);
+    });
+
+    it('takes a saved video off the saved list when asked', function (): void {
+        $video = watchable(['saved_for_later_at' => now()]);
+
+        Livewire::test('pages::watch', ['video' => $video])->call('toggleSavedForLater');
+
+        expect($video->fresh()->saved_for_later_at)->toBeNull();
+    });
+
+    it('takes a saved video off the saved list once it is watched', function (): void {
+        $video = watchable(['saved_for_later_at' => now()]);
+
+        Livewire::test('pages::watch', ['video' => $video])->call('markWatched');
+
+        expect($video->fresh())
+            ->watched_at->not->toBeNull()
+            ->saved_for_later_at->toBeNull();
+    });
+
+    it('offers no saving for a video already watched', function (): void {
+        $video = watchable(['watched_at' => now()]);
+
+        Livewire::test('pages::watch', ['video' => $video])->assertDontSee('Save for later');
+    });
+});
+
 describe('the end-of-video panel', function (): void {
     it('offers the next unwatched video from the same channel', function (): void {
         $channel = calmChannel();
@@ -339,6 +377,14 @@ describe('returning to the feed', function (): void {
         // written as an entity inside the attribute.
         $this->get(route('videos.watch', $video))
             ->assertSee(route('feed', ['filter' => 'unwatched', 'channel' => CALM_CHANNEL_ID]));
+    });
+
+    it('carries the sort back too', function (): void {
+        session()->put('calm-tube.feed.sort', 'shortest');
+        $video = watchable();
+
+        $this->get(route('videos.watch', $video))
+            ->assertSee(route('feed', ['sort' => 'shortest']), escape: false);
     });
 
     it('returns to the plain feed when no filter was in use', function (): void {

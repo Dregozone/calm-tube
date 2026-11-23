@@ -123,6 +123,103 @@ describe('filters', function (): void {
     });
 });
 
+describe('saved for later', function (): void {
+    it('keeps saved videos off the main feed', function (string $filter): void {
+        $channel = calmChannel();
+        $kept = Video::factory()->for($channel)->create();
+        Video::factory()->for($channel)->savedForLater()->create();
+
+        Livewire::test('pages::feed')
+            ->set('filter', $filter)
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$kept->id]);
+    })->with(['all', 'unwatched']);
+
+    it('shows only saved videos on the saved tab', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->create();
+        $saved = Video::factory()->for($channel)->savedForLater()->create();
+
+        Livewire::test('pages::feed')
+            ->set('filter', 'saved')
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$saved->id]);
+    });
+
+    it('counts only the saved videos in the time remaining on the saved tab', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->create(['duration_seconds' => 3600]);
+        Video::factory()->for($channel)->savedForLater()->create(['duration_seconds' => 600]);
+
+        Livewire::test('pages::feed')
+            ->set('filter', 'saved')
+            ->assertViewHas('remaining', '0:10');
+    });
+
+    it('says so when nothing is saved', function (): void {
+        Video::factory()->for(calmChannel())->create();
+
+        Livewire::test('pages::feed')
+            ->set('filter', 'saved')
+            ->assertSee('Nothing saved for later');
+    });
+});
+
+describe('sorting', function (): void {
+    it('can show the oldest first', function (): void {
+        $channel = calmChannel();
+        $older = Video::factory()->for($channel)->create(['published_at' => '2026-03-01 12:00:00']);
+        $newer = Video::factory()->for($channel)->create(['published_at' => '2026-03-14 12:00:00']);
+
+        Livewire::test('pages::feed')
+            ->set('sort', 'oldest')
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$older->id, $newer->id]);
+    });
+
+    it('orders by the time left to watch, not the length', function (string $sort, array $expected): void {
+        $normal = calmChannel();
+        $fast = Channel::factory()->create(['playback_rate' => 2.0]);
+
+        // 30 minutes long, 15 at double speed.
+        $doubled = Video::factory()->for($fast)->create(['duration_seconds' => 1800]);
+        // 20 minutes long, half watched: 10 left.
+        $partWatched = Video::factory()->for($normal)->create(['duration_seconds' => 1200, 'resume_seconds' => 600]);
+        // 12 minutes long and not started.
+        $whole = Video::factory()->for($normal)->create(['duration_seconds' => 720]);
+        $unknown = Video::factory()->for($normal)->create(['duration_seconds' => null]);
+
+        $order = ['doubled' => $doubled->id, 'partWatched' => $partWatched->id, 'whole' => $whole->id, 'unknown' => $unknown->id];
+
+        Livewire::test('pages::feed')
+            ->set('filter', 'all')
+            ->set('sort', $sort)
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === array_map(fn (string $name): int => $order[$name], $expected));
+    })->with([
+        'longest first' => ['longest', ['doubled', 'whole', 'partWatched', 'unknown']],
+        'shortest first' => ['shortest', ['partWatched', 'whole', 'doubled', 'unknown']],
+    ]);
+
+    it('pages through a sort by length', function (): void {
+        config()->set('calm-tube.feed.per_page', 2);
+        $channel = calmChannel();
+
+        foreach ([300, 900, 600] as $seconds) {
+            Video::factory()->for($channel)->create(['duration_seconds' => $seconds]);
+        }
+
+        Livewire::test('pages::feed')
+            ->set('filter', 'all')
+            ->set('sort', 'longest')
+            ->call('nextPage')
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('duration_seconds')->all() === [300]
+                && $videos->total() === 3);
+    });
+
+    it('remembers the sort when you come back', function (): void {
+        Livewire::test('pages::feed')->set('sort', 'shortest');
+
+        Livewire::test('pages::feed')->assertSet('sort', 'shortest');
+    });
+});
+
 describe('empty states', function (): void {
     it('invites you to add a channel when you follow none', function (): void {
         Livewire::test('pages::feed')
