@@ -367,9 +367,9 @@ new #[Title('Feed')] class extends Component
      *
      * Each video counts what its card says it will take: the channel's speed
      * applied, the outro left off, and only what is left of one you are part
-     * way through. A watched video has nothing remaining, so the All tab and
-     * the Unwatched tab give the same answer. Null when there is nothing to
-     * add up, rather than a heading claiming 0:00.
+     * way through. A watched video has nothing remaining, so the All tab only
+     * adds the saved videos to the Unwatched tab's answer. Null when there is
+     * nothing to add up, rather than a heading claiming 0:00.
      */
     private function remainingForHumans(): ?string
     {
@@ -398,14 +398,11 @@ new #[Title('Feed')] class extends Component
     {
         return Video::query()
             ->inFeed()
-            ->when($this->filter === 'unwatched', fn ($query) => $query->unwatched())
-            // Saved for later is its own list: off the other two, and the only
-            // thing on its own tab.
-            ->when(
-                $this->filter === 'saved',
-                fn ($query) => $query->savedForLater(),
-                fn ($query) => $query->notSavedForLater(),
-            )
+            // All is everything in the feed, saved or not, watched or not.
+            // Unwatched is what is still to do, less what you saved for
+            // another time, and Saved is only that.
+            ->when($this->filter === 'unwatched', fn ($query) => $query->unwatched()->notSavedForLater())
+            ->when($this->filter === 'saved', fn ($query) => $query->savedForLater())
             ->when($this->channel !== '', fn ($query) => $query->whereRelation(
                 'channel', 'youtube_channel_id', $this->channel
             ))

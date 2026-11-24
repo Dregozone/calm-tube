@@ -54,7 +54,7 @@ directly.
 | `duration_seconds` | integer | yes | null | Null = unknown (no API key, quota, or live) |
 | `resume_seconds` | integer | yes | null | How far in you got; null means not started, or finished |
 | `sampled_out_at` | timestamp | yes | null | Held back by the channel's sample limit; still archived |
-| `saved_for_later_at` | timestamp | yes | null | Saved from the watch page: off the feed's All and Unwatched tabs, on its Saved tab. Cleared when watched or hidden |
+| `saved_for_later_at` | timestamp | yes | null | Saved from the watch page: off the feed's Unwatched tab, on its All and Saved tabs. Cleared when watched or hidden |
 | `on_reading_list_at` | timestamp | yes | null | Set once the video has been on the reading list, and never cleared: it is the videos page's from then on, never in the feed and never counted by a sample limit |
 | `thumbnail_url` | string | yes | null | Source URL; fallback when no local file |
 | `thumbnail_path` | string | yes | null | Archived file, relative to the configured disk |

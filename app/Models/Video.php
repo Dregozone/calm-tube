@@ -220,7 +220,7 @@ class Video extends Model
 
     /**
      * Put aside from the watch page to watch another time. Still in the feed,
-     * but only on its Saved tab: the All and Unwatched tabs leave it out.
+     * on its All and Saved tabs: only the Unwatched tab leaves it out.
      *
      * @param  Builder<$this>  $query
      */

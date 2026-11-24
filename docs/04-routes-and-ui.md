@@ -130,7 +130,8 @@ they are remembered in the session too, so coming back from a video lands on the
 Changing any of them resets to page 1.
 
 **Saved for later:** "Save for later" on the watch page sets `saved_for_later_at`, which moves
-the video off the All and Unwatched tabs and onto Saved. It is only somewhere to put a video for
+the video off the Unwatched tab and onto Saved; All still shows it, as All shows everything in
+the feed, watched or not. It is only somewhere to put a video for
 another time: watching it, or hiding it, clears the flag, and marking it unwatched again does not
 bring it back.
 
