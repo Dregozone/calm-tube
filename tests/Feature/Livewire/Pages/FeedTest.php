@@ -124,15 +124,36 @@ describe('filters', function (): void {
 });
 
 describe('saved for later', function (): void {
-    it('keeps saved videos off the main feed', function (string $filter): void {
+    it('keeps saved videos off the unwatched tab', function (): void {
         $channel = calmChannel();
         $kept = Video::factory()->for($channel)->create();
         Video::factory()->for($channel)->savedForLater()->create();
 
         Livewire::test('pages::feed')
-            ->set('filter', $filter)
+            ->set('filter', 'unwatched')
             ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$kept->id]);
-    })->with(['all', 'unwatched']);
+    });
+
+    it('shows saved, unwatched and watched videos on the all tab', function (): void {
+        $channel = calmChannel();
+        $unwatched = Video::factory()->for($channel)->create(['published_at' => '2026-03-03 12:00:00']);
+        $saved = Video::factory()->for($channel)->savedForLater()->create(['published_at' => '2026-03-02 12:00:00']);
+        $watched = Video::factory()->for($channel)->create(['published_at' => '2026-03-01 12:00:00', 'watched_at' => now()]);
+
+        Livewire::test('pages::feed')
+            ->set('filter', 'all')
+            ->assertViewHas('videos', fn ($videos): bool => $videos->pluck('id')->all() === [$unwatched->id, $saved->id, $watched->id]);
+    });
+
+    it('counts saved videos in the time remaining on the all tab', function (): void {
+        $channel = calmChannel();
+        Video::factory()->for($channel)->create(['duration_seconds' => 3600]);
+        Video::factory()->for($channel)->savedForLater()->create(['duration_seconds' => 600]);
+
+        Livewire::test('pages::feed')
+            ->set('filter', 'all')
+            ->assertViewHas('remaining', '1:10');
+    });
 
     it('shows only saved videos on the saved tab', function (): void {
         $channel = calmChannel();
