@@ -411,18 +411,18 @@ new #[Title('Feed')] class extends Component
 }; ?>
 
 <section class="w-full" @if ($stale) wire:init="autoRefresh" @endif>
-    <div class="flex flex-wrap items-start justify-between gap-4">
+    <div class="flex items-center justify-between gap-3">
         <flux:heading size="xl" level="1">
             {{ __('Feed') }}
 
             @if ($remaining)
-                <span class="font-normal text-zinc-500 dark:text-zinc-400" title="{{ __('Time left to watch everything shown, at each channel’s speed') }}">({{ $remaining }}<span class="hidden sm:inline"> {{ __('remaining') }}</span>)</span>
+                <span class="font-normal text-zinc-500 dark:text-zinc-400" title="{{ __('Time left to watch everything shown, at each channel’s speed') }}">· {{ $remaining }} {{ __('left') }}</span>
             @endif
         </flux:heading>
 
-        <div class="flex flex-wrap items-center gap-3">
+        <div class="flex items-center gap-3">
             @if ($lastRefreshedAt)
-                <flux:text size="sm" wire:loading.remove wire:target="refreshAll">
+                <flux:text size="sm" class="max-sm:hidden" wire:loading.remove wire:target="refreshAll,autoRefresh">
                     {{ __('Last refreshed') }} {{ \Illuminate\Support\Carbon::parse($lastRefreshedAt)->diffForHumans() }}
                 </flux:text>
             @endif
@@ -432,18 +432,21 @@ new #[Title('Feed')] class extends Component
             </flux:text>
 
             <flux:text size="sm" wire:loading wire:target="autoRefresh">
-                {{ __('Checking for new videos') }}…
+                <span class="sm:hidden">{{ __('Checking') }}…</span>
+                <span class="max-sm:hidden">{{ __('Checking for new videos') }}…</span>
             </flux:text>
 
             @unless ($followsNothing)
                 <flux:button
                     wire:click="refreshAll"
                     icon="arrow-path"
-                    variant="subtle"
+                    variant="ghost"
+                    size="sm"
+                    aria-label="{{ __('Refresh all') }}"
                     wire:loading.attr="disabled"
-                    class="data-loading:opacity-50"
+                    class="data-loading:opacity-50 max-sm:-me-2"
                 >
-                    {{ __('Refresh all') }}
+                    <span class="max-sm:hidden">{{ __('Refresh all') }}</span>
                 </flux:button>
             @endunless
         </div>
@@ -486,29 +489,65 @@ new #[Title('Feed')] class extends Component
     @endif
 
     @unless ($followsNothing)
-        <div class="mt-6 flex flex-wrap items-center gap-3">
-            <flux:radio.group wire:model.live="filter" variant="segmented" size="sm">
+        @php
+            $sortOptions = [
+                'newest' => __('Newest first'),
+                'oldest' => __('Oldest first'),
+                'longest' => __('Longest first'),
+                'shortest' => __('Shortest first'),
+            ];
+            $selectedChannel = $channels->firstWhere('youtube_channel_id', $channel);
+            $narrowedBy = ($sort !== 'newest' ? 1 : 0) + ($selectedChannel ? 1 : 0);
+        @endphp
+
+        <div class="mt-5 flex items-center gap-2 sm:gap-3">
+            <flux:radio.group wire:model.live="filter" variant="segmented" size="sm" class="flex-1 sm:max-w-80">
                 <flux:radio value="all">{{ __('All') }}</flux:radio>
                 <flux:radio value="unwatched">{{ __('Unwatched') }}</flux:radio>
                 <flux:radio value="saved">{{ __('Saved') }}</flux:radio>
             </flux:radio.group>
 
-            <flux:select wire:model.live="sort" size="sm" class="max-w-48" aria-label="{{ __('Sort by') }}">
-                <flux:select.option value="newest">{{ __('Newest first') }}</flux:select.option>
-                <flux:select.option value="oldest">{{ __('Oldest first') }}</flux:select.option>
-                <flux:select.option value="longest">{{ __('Longest first') }}</flux:select.option>
-                <flux:select.option value="shortest">{{ __('Shortest first') }}</flux:select.option>
-            </flux:select>
+            {{-- A phone has room for one button beside the tabs: sort and
+                 channel live behind it, in a sheet. --}}
+            <flux:modal.trigger name="feed-filters" class="sm:hidden">
+                <flux:button size="sm" icon="adjustments-horizontal" aria-label="{{ __('Sort and channel') }}">
+                    @if ($narrowedBy > 0)
+                        <flux:badge size="sm" color="blue" class="-me-1">{{ $narrowedBy }}</flux:badge>
+                    @endif
+                </flux:button>
+            </flux:modal.trigger>
 
-            <flux:select wire:model.live="channel" size="sm" class="max-w-64" data-calm-focus>
-                <flux:select.option value="">{{ __('All channels') }}</flux:select.option>
+            <div class="ms-auto flex items-center gap-2 max-sm:hidden">
+                <flux:dropdown align="end">
+                    <flux:button size="sm" variant="ghost" icon="user-circle" icon:trailing="chevron-down" data-calm-focus>
+                        {{ $selectedChannel?->display_name ?? __('All channels') }}
+                    </flux:button>
 
-                @foreach ($channels as $option)
-                    <flux:select.option value="{{ $option->youtube_channel_id }}">
-                        {{ $option->display_name }}
-                    </flux:select.option>
-                @endforeach
-            </flux:select>
+                    <flux:menu class="max-h-96 overflow-y-auto">
+                        <flux:menu.radio.group wire:model.live="channel">
+                            <flux:menu.radio value="">{{ __('All channels') }}</flux:menu.radio>
+
+                            @foreach ($channels as $option)
+                                <flux:menu.radio value="{{ $option->youtube_channel_id }}">{{ $option->display_name }}</flux:menu.radio>
+                            @endforeach
+                        </flux:menu.radio.group>
+                    </flux:menu>
+                </flux:dropdown>
+
+                <flux:dropdown align="end">
+                    <flux:button size="sm" variant="ghost" icon="arrows-up-down" icon:trailing="chevron-down" aria-label="{{ __('Sort by') }}">
+                        {{ $sortOptions[$sort] ?? $sortOptions['newest'] }}
+                    </flux:button>
+
+                    <flux:menu>
+                        <flux:menu.radio.group wire:model.live="sort">
+                            @foreach ($sortOptions as $value => $label)
+                                <flux:menu.radio value="{{ $value }}">{{ $label }}</flux:menu.radio>
+                            @endforeach
+                        </flux:menu.radio.group>
+                    </flux:menu>
+                </flux:dropdown>
+            </div>
 
             {{-- <flux:button
                 wire:click="markPageWatched"
@@ -521,6 +560,50 @@ new #[Title('Feed')] class extends Component
                 {{ __('Mark page watched') }}
             </flux:button> --}}
         </div>
+
+        {{-- What the hidden sheet is narrowing the feed by, each a tap to undo. --}}
+        @if ($narrowedBy > 0)
+            <div class="mt-3 flex flex-wrap gap-2 sm:hidden">
+                @if ($selectedChannel)
+                    <flux:badge size="sm">
+                        {{ $selectedChannel->display_name }}
+                        <flux:badge.close wire:click="$set('channel', '')" aria-label="{{ __('Show all channels') }}" />
+                    </flux:badge>
+                @endif
+
+                @if ($sort !== 'newest')
+                    <flux:badge size="sm">
+                        {{ $sortOptions[$sort] ?? '' }}
+                        <flux:badge.close wire:click="$set('sort', 'newest')" aria-label="{{ __('Sort newest first') }}" />
+                    </flux:badge>
+                @endif
+            </div>
+        @endif
+
+        <flux:modal name="feed-filters" variant="flyout" position="bottom" class="rounded-t-2xl p-6!">
+            <flux:heading size="lg">{{ __('Sort and channel') }}</flux:heading>
+
+            <flux:subheading class="mt-6 mb-2 font-medium">{{ __('Sort') }}</flux:subheading>
+            <flux:radio.group wire:model.live="sort" variant="segmented" size="sm">
+                <flux:radio value="newest">{{ __('Newest') }}</flux:radio>
+                <flux:radio value="oldest">{{ __('Oldest') }}</flux:radio>
+                <flux:radio value="longest">{{ __('Longest') }}</flux:radio>
+                <flux:radio value="shortest">{{ __('Shortest') }}</flux:radio>
+            </flux:radio.group>
+
+            <flux:subheading class="mt-6 mb-3 font-medium">{{ __('Channel') }}</flux:subheading>
+            <flux:radio.group wire:model.live="channel" class="max-h-72 overflow-y-auto">
+                <flux:radio value="" label="{{ __('All channels') }}" />
+
+                @foreach ($channels as $option)
+                    <flux:radio value="{{ $option->youtube_channel_id }}" label="{{ $option->display_name }}" />
+                @endforeach
+            </flux:radio.group>
+
+            <flux:modal.close>
+                <flux:button variant="primary" class="mt-6 w-full">{{ __('Show videos') }}</flux:button>
+            </flux:modal.close>
+        </flux:modal>
     @endunless
 
     @if ($setAsideThisWeek > 0)
