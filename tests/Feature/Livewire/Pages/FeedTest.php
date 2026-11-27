@@ -705,7 +705,7 @@ describe('remaining watch time', function (): void {
 
         Livewire::test('pages::feed')
             ->assertViewHas('remaining', '1:25')
-            ->assertSeeHtml('(1:25<span class="hidden sm:inline"> remaining</span>)');
+            ->assertSeeHtml('· 1:25 left</span>');
     });
 
     it('counts each video as its card does', function (): void {

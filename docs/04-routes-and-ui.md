@@ -92,10 +92,9 @@ The home of the app. One reverse-chronological grid across all enabled channels.
 │ CALM TUBE          Feed   Channels                              [avatar ▾]   │
 ├──────────────────────────────────────────────────────────────────────────────┤
 │                                                                              │
-│  Feed (3:25 remaining)                           Last refreshed 14 min ago   │
-│                                                          [ ⟳ Refresh all ]   │
+│  Feed · 3:25 left               Last refreshed 14 min ago  [ ⟳ Refresh all ] │
 │                                                                              │
-│  [ All | Unwatched | Saved ]  [ Newest first ▾ ]  [ All channels ▾ ]         │
+│  [ All | Unwatched | Saved ]          [ ◉ All channels ▾ ] [ ⇅ Newest first ▾ ]│
 │                                                                              │
 │  ┌────────────────────┐  ┌────────────────────┐  ┌────────────────────┐      │
 │  │                    │  │                    │  │░░░░░░░░░░░░░░░░░░░░│      │
@@ -124,7 +123,10 @@ archived title (2 lines, then truncate), channel avatar + display name, relative
 Watched cards are dimmed to ~55% opacity with a "watched" marker; hover reveals the actions.
 
 **Filters:** `all | unwatched | saved` segmented control, a sort dropdown and a channel
-dropdown. All three are Livewire `#[Url]` properties, so the state lives in the query string
+dropdown. On a phone the tabs share one row with a single filter button instead: sort and
+channel sit behind it in a bottom sheet, the button counts how many of the two are changed from
+the default, and each one changed shows as a chip beneath the tabs that puts it back with a tap.
+The refresh button is icon-only there, and "Last refreshed" is left off. All three are Livewire `#[Url]` properties, so the state lives in the query string
 (`/feed?filter=unwatched&sort=shortest&channel=UC…`) and survives refreshes and the back button;
 they are remembered in the session too, so coming back from a video lands on the same view.
 Changing any of them resets to page 1.
